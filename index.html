@@ -1,184 +1,173 @@
 <!DOCTYPE html>
+
 <html lang="vi">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Tuấn Anh Điếu Cày — Cửa hàng điếu cày & thuốc lào</title>
-  <meta name="description" content="Điếu cày & thuốc lào chất lượng. Giá tốt, giao nhanh. Đặt hàng & hỗ trợ Zalo.">
-  <link rel="icon" href="img/logo.jpg">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/style.css">
-</head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1" name="viewport">
+<title>Tuấn Anh Điếu Cày — Cửa hàng điếu cày &amp; thuốc lào</title>
+<meta content="Điếu cày &amp; thuốc lào chất lượng. Giá tốt, giao nhanh. Đặt hàng &amp; hỗ trợ Zalo." name="description"/>
+<link href="img/logo.jpg" rel="icon"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="assets/style.css" rel="stylesheet"/>
+</meta></head>
 <body>
-  <header class="header">
-    <div class="container header__inner">
-      <a class="brand" href="#"><img src="img/logo.jpg" alt="" class="brand__logo"> <span>Tuấn Anh Điếu Cày</span></a>
-      <nav class="nav">
-        <a href="flash.html">Flash Sale</a>
-        <a href="#products">Sản phẩm</a>
-        <a href="#featured">Nổi bật</a>
-      </nav>
-      <div class="header__cta">
-        <button id="openCart" class="btn">Giỏ hàng <span id="cartCount" class="badge">0</span></button>
-        <a class="btn" href="checkout.html">Đặt hàng</a>
-      </div>
-    </div>
-  </header>
-
-  <section class="hero">
-    <div class="container hero__inner">
-      <div class="hero__copy">
-        <h1>Điếu cày & Thuốc lào <span class="highlight">chuẩn vị truyền thống</span></h1>
-        <p>Âm êm – vị đậm. Tư vấn chọn mẫu phù hợp, giao nhanh toàn quốc.</p>
-        <div class="hero__cta">
-          <a href="#products" class="btn">Xem sản phẩm</a>
-          <a href="checkout.html" class="btn">Đặt hàng</a>
-        </div>
-      </div>
-      <div class="hero__media">
-        <img src="img/logo.jpg" alt="Tuấn Anh Điếu Cày" class="hero__logo">
-      </div>
-    </div>
-  </section>
-
-  <section id="products" class="section">
-    <div class="container">
-      <div class="section__head">
-        <h2>Sản phẩm</h2>
-        <span class="muted">Bấm ảnh hoặc “Mua ngay” để thêm vào giỏ</span>
-      </div>
-      <div class="products">
-        <div class="card product">
-          <div class="product__thumb" tabindex="0">
-            <div class="product__badge">Flash sale</div>
-            <img src="img/DieuNuaNoGoBocDong.jpg" alt="Điếu nứa nỏ gỗ bọc đồng">
-          </div>
-          <div class="product__body">
-            <h3 class="product__title">Điếu nứa nỏ gỗ bọc đồng</h3>
-            <div class="product__price"><del>150.000₫</del><strong>125.000₫</strong></div>
-          </div>
-          <div class="product__actions">
-            <button class="btn btn--small" data-add='{"id":"p1","name":"Điếu nứa bọc đồng nõ ngọc","price":360000}'>Mua ngay</button>
-          </div>
-        </div>
-
-        <div class="card product">
-          <div class="product__thumb" tabindex="0">
-            <img src="img/HopDungThuoc.jpg" alt="Hộp đồng đựng thuốc lào">
-          </div>
-          <div class="product__body">
-            <h3 class="product__title">Hộp đồng đựng thuốc lào</h3>
-            <div class="product__price"><strong>75.000₫</strong></div>
-          </div>
-          <div class="product__actions">
-            <button class="btn btn--small" data-add='{"id":"p2","name":"Hộp đồng đựng thuốc lào","price":75000}'>Mua ngay</button>
-          </div>
-        </div>
-
-        <div class="card product">
-          <div class="product__thumb" tabindex="0">
-            <img src="img/DieuTrucBocDong02.jpg" alt="Điếu trúc bọc đồng hoa văn chìm">
-          </div>
-          <div class="product__body">
-            <h3 class="product__title">Điếu trúc bọc đồng hoa văn chìm</h3>
-            <div class="product__price"><strong>299.000₫</strong></div>
-          </div>
-          <div class="product__actions">
-            <button class="btn btn--small" data-add='{"id":"p3","name":"Điếu trúc bọc đồng hoa văn chìm","price":299000}'>Mua ngay</button>
-          </div>
-        </div>
-
-        <div class="card product">
-          <div class="product__thumb" tabindex="0">
-            <div class="product__badge" style="background:#111827;color:#fff">Hết hàng</div>
-            <img src="img/DieuTruc9mat.jpg" alt="Điếu trúc 9 mắt cao cấp">
-          </div>
-          <div class="product__body">
-            <h3 class="product__title">Điếu trúc 9 mắt cao cấp</h3>
-            <div class="product__price"><strong>550.000₫</strong></div>
-          </div>
-          <div class="product__actions">
-            <button class="btn btn--small" disabled>Hết hàng</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <section id="featured" class="section alt">
-    <div class="container">
-      <div class="section__head"><h2>Sản phẩm nổi bật</h2></div>
-      <div class="products">
-        <div class="card product">
-          <div class="product__thumb" tabindex="0">
-            <div class="product__badge">Flash sale</div>
-            <img src="img/Dieu03.jpg" alt="Điếu cày bọc đồng toàn thân">
-          </div>
-          <div class="product__body">
-            <h3 class="product__title">Điếu cày bọc đồng toàn thân</h3>
-            <div class="product__price"><del>750.000₫</del><strong>690.000₫</strong></div>
-          </div>
-          <div class="product__actions">
-            <button class="btn btn--small" data-add='{"id":"p5","name":"Điếu cày bọc đồng toàn thân","price":690000}'>Mua ngay</button>
-          </div>
-        </div>
-
-        <div class="card product">
-          <div class="product__thumb" tabindex="0">
-            <div class="product__badge" style="background:#111827;color:#fff">Hết hàng</div>
-            <img src="img/Dieu03.jpg" alt="Trúc rút full epoxy">
-          </div>
-          <div class="product__body">
-            <h3 class="product__title">Trúc rút full epoxy</h3>
-            <div class="product__price"><strong>600.000₫</strong></div>
-          </div>
-          <div class="product__actions">
-            <button class="btn btn--small" disabled>Hết hàng</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <footer class="footer" id="contact">
-    <div class="container footer__bottom">
-      <span>© <script>document.write(new Date().getFullYear())</script> Tuấn Anh Điếu Cày</span>
-        <div class="footer__links">
-          <a class="link" href="https://maps.app.goo.gl/9sJ1fRQFprgf7jjb8" target="_blank" rel="noopener">Địa chỉ: 09 Tiên Sơn 10, Hoà Cường Nam, Hải Châu, Đà Nẵng </a>
-        </div>
-    </div>
-  </footer>
-
-  <!-- Cart Drawer -->
-  <div id="cartDrawer" class="drawer">
-    <div class="drawer__overlay" id="closeCart"></div>
-    <div class="drawer__panel">
-      <div class="drawer__head">
-        <h3>Giỏ hàng</h3>
-        <button id="xCart" class="icon-btn" aria-label="Đóng">×</button>
-      </div>
-      <div id="drawerItems" class="drawer__items"></div>
-      <div class="drawer__foot">
-        <div class="drawer__total">Tổng: <strong id="drawerTotal">0₫</strong></div>
-        <a class="btn btn--full" href="checkout.html">Đặt hàng</a>
-      </div>
-    </div>
-  </div>
-
+<header class="header">
+<div class="container header__inner">
+<a class="brand" href="#"><img alt="" class="brand__logo" src="img/logo.jpg"/> <span>Tuấn Anh Điếu Cày</span></a>
+<nav class="nav">
+<a href="#products">Sản phẩm</a>
+<a href="#featured">Nổi bật</a>
+<a href="flash-sale.html">Flash Sale</a></nav>
+<div class="header__cta">
+<button class="btn" id="openCart">Giỏ hàng <span class="badge" id="cartCount">0</span></button>
+<a class="btn" href="checkout.html">Đặt hàng</a>
+</div>
+</div>
+</header>
+<section class="hero">
+<div class="container hero__inner">
+<div class="hero__copy">
+<h1>Điếu cày &amp; Thuốc lào <span class="highlight">chuẩn vị truyền thống</span></h1>
+<p>Âm êm – vị đậm. Tư vấn chọn mẫu phù hợp, giao nhanh toàn quốc.</p>
+<div class="hero__cta">
+<a class="btn" href="#products">Xem sản phẩm</a>
+<a class="btn" href="checkout.html">Đặt hàng</a>
+</div>
+</div>
+<div class="hero__media">
+<img alt="Tuấn Anh Điếu Cày" class="hero__logo" src="img/logo.jpg"/>
+</div>
+</div>
+</section>
+<section class="section" id="products">
+<div class="container">
+<div class="section__head">
+<h2>Sản phẩm</h2>
+<span class="muted">Bấm ảnh hoặc “Mua ngay” để thêm vào giỏ</span>
+</div>
+<div class="products">
+<div class="card product">
+<div class="product__thumb" tabindex="0">
+<div class="product__badge">Flash sale</div>
+<img alt="Điếu nứa nỏ gỗ bọc đồng" src="img/DieuNuaNoGoBocDong.jpg"/>
+</div>
+<div class="product__body">
+<h3 class="product__title">Điếu nứa nỏ gỗ bọc đồng</h3>
+<div class="product__price"><del>150.000₫</del><strong>125.000₫</strong></div>
+</div>
+<div class="product__actions">
+<button class="btn btn--small" data-add='{"id":"p1","name":"Điếu nứa bọc đồng nõ ngọc","price":360000}'>Mua ngay</button>
+</div>
+</div>
+<div class="card product">
+<div class="product__thumb" tabindex="0">
+<img alt="Hộp đồng đựng thuốc lào" src="img/HopDungThuoc.jpg"/>
+</div>
+<div class="product__body">
+<h3 class="product__title">Hộp đồng đựng thuốc lào</h3>
+<div class="product__price"><strong>75.000₫</strong></div>
+</div>
+<div class="product__actions">
+<button class="btn btn--small" data-add='{"id":"p2","name":"Hộp đồng đựng thuốc lào","price":75000}'>Mua ngay</button>
+</div>
+</div>
+<div class="card product">
+<div class="product__thumb" tabindex="0">
+<img alt="Điếu trúc bọc đồng hoa văn chìm" src="img/DieuTrucBocDong02.jpg"/>
+</div>
+<div class="product__body">
+<h3 class="product__title">Điếu trúc bọc đồng hoa văn chìm</h3>
+<div class="product__price"><strong>299.000₫</strong></div>
+</div>
+<div class="product__actions">
+<button class="btn btn--small" data-add='{"id":"p3","name":"Điếu trúc bọc đồng hoa văn chìm","price":299000}'>Mua ngay</button>
+</div>
+</div>
+<div class="card product">
+<div class="product__thumb" tabindex="0">
+<div class="product__badge" style="background:#111827;color:#fff">Hết hàng</div>
+<img alt="Điếu trúc 9 mắt cao cấp" src="img/DieuTruc9mat.jpg"/>
+</div>
+<div class="product__body">
+<h3 class="product__title">Điếu trúc 9 mắt cao cấp</h3>
+<div class="product__price"><strong>550.000₫</strong></div>
+</div>
+<div class="product__actions">
+<button class="btn btn--small" disabled="">Hết hàng</button>
+</div>
+</div>
+</div>
+</div>
+</section>
+<section class="section alt" id="featured">
+<div class="container">
+<div class="section__head"><h2>Sản phẩm nổi bật</h2></div>
+<div class="products">
+<div class="card product">
+<div class="product__thumb" tabindex="0">
+<div class="product__badge">Flash sale</div>
+<img alt="Điếu cày bọc đồng toàn thân" src="img/Dieu03.jpg"/>
+</div>
+<div class="product__body">
+<h3 class="product__title">Điếu cày bọc đồng toàn thân</h3>
+<div class="product__price"><del>750.000₫</del><strong>690.000₫</strong></div>
+</div>
+<div class="product__actions">
+<button class="btn btn--small" data-add='{"id":"p5","name":"Điếu cày bọc đồng toàn thân","price":690000}'>Mua ngay</button>
+</div>
+</div>
+<div class="card product">
+<div class="product__thumb" tabindex="0">
+<div class="product__badge" style="background:#111827;color:#fff">Hết hàng</div>
+<img alt="Trúc rút full epoxy" src="img/Dieu03.jpg"/>
+</div>
+<div class="product__body">
+<h3 class="product__title">Trúc rút full epoxy</h3>
+<div class="product__price"><strong>600.000₫</strong></div>
+</div>
+<div class="product__actions">
+<button class="btn btn--small" disabled="">Hết hàng</button>
+</div>
+</div>
+</div>
+</div>
+</section>
+<footer class="footer" id="contact">
+<div class="container footer__bottom">
+<span>© <script>document.write(new Date().getFullYear())</script> Tuấn Anh Điếu Cày</span>
+<div class="footer__links">
+<a class="link" href="https://maps.app.goo.gl/9sJ1fRQFprgf7jjb8" rel="noopener" target="_blank">Địa chỉ: 09 Tiên Sơn 10, Hoà Cường Nam, Hải Châu, Đà Nẵng </a>
+</div>
+</div>
+</footer>
+<!-- Cart Drawer -->
+<div class="drawer" id="cartDrawer">
+<div class="drawer__overlay" id="closeCart"></div>
+<div class="drawer__panel">
+<div class="drawer__head">
+<h3>Giỏ hàng</h3>
+<button aria-label="Đóng" class="icon-btn" id="xCart">×</button>
+</div>
+<div class="drawer__items" id="drawerItems"></div>
+<div class="drawer__foot">
+<div class="drawer__total">Tổng: <strong id="drawerTotal">0₫</strong></div>
+<a class="btn btn--full" href="checkout.html">Đặt hàng</a>
+</div>
+</div>
+</div>
 <!-- Nút gọi điện -->
-  <a href="tel:+84905695949" class="phone-fab" target="_blank" rel="noopener" aria-label="Gọi điện">
-    <img src="img/phone.png" alt="Gọi điện" />
-  </a>
+<a aria-label="Gọi điện" class="phone-fab" href="tel:+84905695949" rel="noopener" target="_blank">
+<img alt="Gọi điện" src="img/phone.png">
+</img></a>
 <!-- Nút Facebook -->
-  <a href="https://www.facebook.com/dailythuoclao43" class="facebook-fab" target="_blank" rel="noopener" aria-label="Facebook">
-    <img src="img/facebook.png" alt="Facebook" />
-  </a>
+<a aria-label="Facebook" class="facebook-fab" href="https://www.facebook.com/dailythuoclao43" rel="noopener" target="_blank">
+<img alt="Facebook" src="img/facebook.png">
+</img></a>
 <!-- Nút Zalo -->
-  <a href="https://zalo.me/0905695949" class="zalo-fab" target="_blank" rel="noopener" aria-label="Chat Zalo">
-    <img src="img/Zalo_logo.jpg" alt="Zalo" />
-  </a>
-
-  <script src="assets/app.js"></script>
-  <div id="toast">Đã thêm vào giỏ hàng</div>
+<a aria-label="Chat Zalo" class="zalo-fab" href="https://zalo.me/0905695949" rel="noopener" target="_blank">
+<img alt="Zalo" src="img/Zalo_logo.jpg">
+</img></a>
+<script src="assets/app.js"></script>
+<div id="toast">Đã thêm vào giỏ hàng</div>
 </body>
 </html>

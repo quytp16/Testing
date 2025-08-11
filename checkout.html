@@ -1,104 +1,99 @@
 <!DOCTYPE html>
+
 <html lang="vi">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Thanh toán — Tuấn Anh Điếu Cày</title>
-  <meta name="description" content="Trang thanh toán đơn hàng Tuấn Anh Điếu Cày">
-  <link rel="icon" href="img/logo.jpg">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/style.css">
-  <!-- PDF libs for client-side invoice -->
-  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
-</head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1" name="viewport">
+<title>Thanh toán — Tuấn Anh Điếu Cày</title>
+<meta content="Trang thanh toán đơn hàng Tuấn Anh Điếu Cày" name="description"/>
+<link href="img/logo.jpg" rel="icon"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="assets/style.css" rel="stylesheet"/>
+<!-- PDF libs for client-side invoice -->
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+</meta></head>
 <body>
-  <header class="header">
-    <div class="container header__inner">
-      <a class="brand" href="index.html"><img src="img/logo.jpg" alt="" class="brand__logo"> <span>Tuấn Anh Điếu Cày</span></a>
-      <nav class="nav"><a href="index.html#products">Sản phẩm</a></nav>
-      <div class="header__cta"><a href="index.html" class="btn btn--ghost">Quay lại</a></div>
-    </div>
-  </header>
-
-  <section class="checkout">
-    <div class="container">
-      <h1>Thanh toán</h1>
-      <div class="checkout__wrap">
-        <div class="box">
-          <h3>Thông tin đơn hàng</h3>
-          <div id="summary"></div>
-          <div class="total"><span>Tổng cộng:</span><strong id="sumTotal">0₫</strong></div>
-        </div>
-
-        <div class="box">
-          <h3>Thông tin khách hàng</h3>
-          <form id="payForm" class="form-grid" action="https://formspree.io/f/meozvdoo" method="POST">
-            <input type="text" name="_gotcha" style="display:none">
-            <input type="hidden" name="_subject" value="Đơn hàng mới - Tuấn Anh Điếu Cày (Checkout riêng)">
-            <input type="hidden" name="cart_json" id="cartJson" value="[]">
-            <input type="hidden" name="cart_total" id="cartTotal" value="0">
-
-            <div><label>Họ và tên</label><input name="name" required></div>
-            <div><label>Số điện thoại</label><input name="phone" required></div>
-            <div><label>Email</label><input type="email" name="email" required></div>
-            <div>
-              <label>Phương thức thanh toán</label>
-              <select id="payment" name="payment_method" required>
-                <option value="COD">COD</option>
-                <option value="BANK">Chuyển khoản</option>
-                <option value="MOMO">MoMo</option>
-              </select>
+<header class="header">
+<div class="container header__inner">
+<a class="brand" href="index.html"><img alt="" class="brand__logo" src="img/logo.jpg"/> <span>Tuấn Anh Điếu Cày</span></a>
+<nav class="nav"><a href="index.html#products">Sản phẩm</a><a href="flash-sale.html">Flash Sale</a></nav>
+<div class="header__cta"><a class="btn btn--ghost" href="index.html">Quay lại</a></div>
+</div>
+</header>
+<section class="checkout">
+<div class="container">
+<h1>Thanh toán</h1>
+<div class="checkout__wrap">
+<div class="box">
+<h3>Thông tin đơn hàng</h3>
+<div id="summary"></div>
+<div class="total"><span>Tổng cộng:</span><strong id="sumTotal">0₫</strong></div>
+</div>
+<div class="box">
+<h3>Thông tin khách hàng</h3>
+<form action="https://formspree.io/f/meozvdoo" class="form-grid" id="payForm" method="POST">
+<input name="_gotcha" style="display:none" type="text"/>
+<input name="_subject" type="hidden" value="Đơn hàng mới - Tuấn Anh Điếu Cày (Checkout riêng)"/>
+<input id="cartJson" name="cart_json" type="hidden" value="[]"/>
+<input id="cartTotal" name="cart_total" type="hidden" value="0"/>
+<div><label>Họ và tên</label><input name="name" required=""/></div>
+<div><label>Số điện thoại</label><input name="phone" required=""/></div>
+<div><label>Email</label><input name="email" required="" type="email"/></div>
+<div>
+<label>Phương thức thanh toán</label>
+<select id="payment" name="payment_method" required="">
+<option value="COD">COD</option>
+<option value="BANK">Chuyển khoản</option>
+<option value="MOMO">MoMo</option>
+</select>
+</div>
+<div style="grid-column:1/-1"><label>Địa chỉ</label><input name="address" required=""/></div>
+<div class="muted" id="guideCOD" style="grid-column:1/-1">Thanh toán khi nhận hàng (COD).</div>
+<div class="muted" id="guideBANK" style="grid-column:1/-1;display:none">
+<strong>Chuyển khoản SCB:</strong> STK <strong>329745.22222</strong> — Chủ TK <strong>Ngô Tuấn Anh</strong> — Nội dung: <em>Họ tên + SĐT</em>.
             </div>
-            <div style="grid-column:1/-1"><label>Địa chỉ</label><input name="address" required></div>
-            <div id="guideCOD" class="muted" style="grid-column:1/-1">Thanh toán khi nhận hàng (COD).</div>
-            <div id="guideBANK" class="muted" style="grid-column:1/-1;display:none">
-              <strong>Chuyển khoản SCB:</strong> STK <strong>329745.22222</strong> — Chủ TK <strong>Ngô Tuấn Anh</strong> — Nội dung: <em>Họ tên + SĐT</em>.
-            </div>
-            <div id="guideMOMO" class="muted" style="grid-column:1/-1;display:none">
+<div class="muted" id="guideMOMO" style="grid-column:1/-1;display:none">
               MoMo: chuyển đến số <em>sẽ gửi khi xác nhận</em> với nội dung <em>Họ tên + SĐT</em>.
             </div>
-            <textarea name="note" rows="3" style="grid-column:1/-1" placeholder="Ghi chú giao hàng / yêu cầu khác..."></textarea>
-
-            <button class="btn" type="submit" style="grid-column:1/-1">Xác nhận và thanh toán</button>
-            <div id="ok" class="alert success" style="grid-column:1/-1">Đặt hàng thành công! Hóa đơn sẽ được tải xuống.</div>
-            <div id="err" class="alert error" style="grid-column:1/-1">Gửi thất bại. Vui lòng thử lại.</div>
-          </form>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- Hidden invoice for rendering -->
-  <div id="invoice" style="width:800px;background:#fff;padding:24px;display:none">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-      <div style="font-weight:800;font-size:20px">Tuấn Anh Điếu Cày</div>
-      <img src="img/logo.jpg" style="width:60px;height:60px;border-radius:8px;object-fit:cover" alt="logo">
-    </div>
-    <div id="invMeta" style="font-size:14px;color:#475569;margin-bottom:14px"></div>
-    <table style="width:100%;border-collapse:collapse">
-      <thead>
-        <tr>
-          <th style="text-align:left;border-bottom:1px solid #e5e7eb;padding:8px 0">Sản phẩm</th>
-          <th style="text-align:right;border-bottom:1px solid #e5e7eb;padding:8px 0">SL</th>
-          <th style="text-align:right;border-bottom:1px solid #e5e7eb;padding:8px 0">Đơn giá</th>
-          <th style="text-align:right;border-bottom:1px solid #e5e7eb;padding:8px 0">Thành tiền</th>
-        </tr>
-      </thead>
-      <tbody id="invBody"></tbody>
-      <tfoot>
-        <tr>
-          <td colspan="3" style="text-align:right;padding-top:10px"><strong>Tổng cộng:</strong></td>
-          <td id="invTotal" style="text-align:right;padding-top:10px"><strong>0₫</strong></td>
-        </tr>
-      </tfoot>
-    </table>
-    <div style="margin-top:14px;font-size:12px;color:#64748b">
+<textarea name="note" placeholder="Ghi chú giao hàng / yêu cầu khác..." rows="3" style="grid-column:1/-1"></textarea>
+<button class="btn" style="grid-column:1/-1" type="submit">Xác nhận và thanh toán</button>
+<div class="alert success" id="ok" style="grid-column:1/-1">Đặt hàng thành công! Hóa đơn sẽ được tải xuống.</div>
+<div class="alert error" id="err" style="grid-column:1/-1">Gửi thất bại. Vui lòng thử lại.</div>
+</form>
+</div>
+</div>
+</div>
+</section>
+<!-- Hidden invoice for rendering -->
+<div id="invoice" style="width:800px;background:#fff;padding:24px;display:none">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+<div style="font-weight:800;font-size:20px">Tuấn Anh Điếu Cày</div>
+<img alt="logo" src="img/logo.jpg" style="width:60px;height:60px;border-radius:8px;object-fit:cover"/>
+</div>
+<div id="invMeta" style="font-size:14px;color:#475569;margin-bottom:14px"></div>
+<table style="width:100%;border-collapse:collapse">
+<thead>
+<tr>
+<th style="text-align:left;border-bottom:1px solid #e5e7eb;padding:8px 0">Sản phẩm</th>
+<th style="text-align:right;border-bottom:1px solid #e5e7eb;padding:8px 0">SL</th>
+<th style="text-align:right;border-bottom:1px solid #e5e7eb;padding:8px 0">Đơn giá</th>
+<th style="text-align:right;border-bottom:1px solid #e5e7eb;padding:8px 0">Thành tiền</th>
+</tr>
+</thead>
+<tbody id="invBody"></tbody>
+<tfoot>
+<tr>
+<td colspan="3" style="text-align:right;padding-top:10px"><strong>Tổng cộng:</strong></td>
+<td id="invTotal" style="text-align:right;padding-top:10px"><strong>0₫</strong></td>
+</tr>
+</tfoot>
+</table>
+<div style="margin-top:14px;font-size:12px;color:#64748b">
       Cảm ơn quý khách đã mua hàng! Liên hệ Zalo 0905.69.59.49 nếu cần hỗ trợ.
     </div>
-  </div>
-
-  <script>
+</div>
+<script>
     const money = n => (n||0).toLocaleString('vi-VN') + '₫';
     function syncGuides(v){
       document.getElementById('guideCOD').style.display = v==='COD'?'block':'none';
