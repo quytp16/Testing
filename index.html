@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Tuấn Anh Điếu Cày — Cửa hàng điếu cày & thuốc lào</title>
+  <meta name="description" content="Điếu cày & thuốc lào chất lượng. Giá tốt, giao nhanh. Đặt hàng & hỗ trợ Zalo.">
+  <link rel="icon" href="img/logo.jpg">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <header class="header">
+    <div class="container header__inner">
+      <a class="brand" href="#"><img src="img/logo.jpg" alt="" class="brand__logo"> <span>Tuấn Anh Điếu Cày</span></a>
+      <nav class="nav">
+        <a href="#products">Sản phẩm</a>
+        <a href="#featured">Nổi bật</a>
+      </nav>
+      <div class="header__cta">
+        <button id="openCart" class="btn">Giỏ hàng <span id="cartCount" class="badge">0</span></button>
+        <a class="btn" href="checkout.html">Đặt hàng</a>
+      </div>
+    </div>
+  </header>
+
+  <section class="hero">
+    <div class="container hero__inner">
+      <div class="hero__copy">
+        <h1>Điếu cày & Thuốc lào <span class="highlight">chuẩn vị truyền thống</span></h1>
+        <p>Âm êm – vị đậm. Tư vấn chọn mẫu phù hợp, giao nhanh toàn quốc.</p>
+        <div class="hero__cta">
+          <a href="#products" class="btn">Xem sản phẩm</a>
+          <a href="checkout.html" class="btn">Đặt hàng</a>
+        </div>
+      </div>
+      <div class="hero__media">
+        <img src="img/logo.jpg" alt="Tuấn Anh Điếu Cày" class="hero__logo">
+      </div>
+    </div>
+  </section>
+
+  <section id="products" class="section">
+    <div class="container">
+      <div class="section__head">
+        <h2>Sản phẩm</h2>
+        <span class="muted">Bấm ảnh hoặc “Mua ngay” để thêm vào giỏ</span>
+      </div>
+      <div class="products">
+        <div class="card product">
+          <div class="product__thumb" tabindex="0">
+            <div class="product__badge">Flash sale</div>
+            <img src="img/DieuNuaNoGoBocDong.jpg" alt="Điếu nứa nỏ gỗ bọc đồng">
+          </div>
+          <div class="product__body">
+            <h3 class="product__title">Điếu nứa nỏ gỗ bọc đồng</h3>
+            <div class="product__price"><del>150.000₫</del><strong>125.000₫</strong></div>
+          </div>
+          <div class="product__actions">
+            <button class="btn btn--small" data-add='{"id":"p1","name":"Điếu nứa bọc đồng nõ ngọc","price":360000}'>Mua ngay</button>
+          </div>
+        </div>
+
+        <div class="card product">
+          <div class="product__thumb" tabindex="0">
+            <img src="img/HopDungThuoc.jpg" alt="Hộp đồng đựng thuốc lào">
+          </div>
+          <div class="product__body">
+            <h3 class="product__title">Hộp đồng đựng thuốc lào</h3>
+            <div class="product__price"><strong>75.000₫</strong></div>
+          </div>
+          <div class="product__actions">
+            <button class="btn btn--small" data-add='{"id":"p2","name":"Hộp đồng đựng thuốc lào","price":75000}'>Mua ngay</button>
+          </div>
+        </div>
+
+        <div class="card product">
+          <div class="product__thumb" tabindex="0">
+            <img src="img/DieuTrucBocDong02.jpg" alt="Điếu trúc bọc đồng hoa văn chìm">
+          </div>
+          <div class="product__body">
+            <h3 class="product__title">Điếu trúc bọc đồng hoa văn chìm</h3>
+            <div class="product__price"><strong>299.000₫</strong></div>
+          </div>
+          <div class="product__actions">
+            <button class="btn btn--small" data-add='{"id":"p3","name":"Điếu trúc bọc đồng hoa văn chìm","price":299000}'>Mua ngay</button>
+          </div>
+        </div>
+
+        <div class="card product">
+          <div class="product__thumb" tabindex="0">
+            <div class="product__badge" style="background:#111827;color:#fff">Hết hàng</div>
+            <img src="img/DieuTruc9mat.jpg" alt="Điếu trúc 9 mắt cao cấp">
+          </div>
+          <div class="product__body">
+            <h3 class="product__title">Điếu trúc 9 mắt cao cấp</h3>
+            <div class="product__price"><strong>550.000₫</strong></div>
+          </div>
+          <div class="product__actions">
+            <button class="btn btn--small" disabled>Hết hàng</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="featured" class="section alt">
+    <div class="container">
+      <div class="section__head"><h2>Sản phẩm nổi bật</h2></div>
+      <div class="products">
+        <div class="card product">
+          <div class="product__thumb" tabindex="0">
+            <div class="product__badge">Flash sale</div>
+            <img src="img/Dieu03.jpg" alt="Điếu cày bọc đồng toàn thân">
+          </div>
+          <div class="product__body">
+            <h3 class="product__title">Điếu cày bọc đồng toàn thân</h3>
+            <div class="product__price"><del>750.000₫</del><strong>690.000₫</strong></div>
+          </div>
+          <div class="product__actions">
+            <button class="btn btn--small" data-add='{"id":"p5","name":"Điếu cày bọc đồng toàn thân","price":690000}'>Mua ngay</button>
+          </div>
+        </div>
+
+        <div class="card product">
+          <div class="product__thumb" tabindex="0">
+            <div class="product__badge" style="background:#111827;color:#fff">Hết hàng</div>
+            <img src="img/Dieu03.jpg" alt="Trúc rút full epoxy">
+          </div>
+          <div class="product__body">
+            <h3 class="product__title">Trúc rút full epoxy</h3>
+            <div class="product__price"><strong>600.000₫</strong></div>
+          </div>
+          <div class="product__actions">
+            <button class="btn btn--small" disabled>Hết hàng</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer" id="contact">
+    <div class="container footer__bottom">
+      <span>© <script>document.write(new Date().getFullYear())</script> Tuấn Anh Điếu Cày</span>
+        <div class="footer__links">
+          <a class="link" href="https://maps.app.goo.gl/9sJ1fRQFprgf7jjb8" target="_blank" rel="noopener">Địa chỉ: 09 Tiên Sơn 10, Hoà Cường Nam, Hải Châu, Đà Nẵng </a>
+        </div>
+    </div>
+  
+<section class="section" id="support">
+  <div class="container">
+    <h2>Tài khoản &amp; Hỗ trợ</h2>
+
+    <div id="authBox" data-state="out" style="margin:10px 0">
+      <form onsubmit="login(event)" data-vis-when="out" style="display:block;margin-bottom:12px">
+        <h4>Đăng nhập</h4>
+        <input id="logEmail" placeholder="Email" required>
+        <input id="logPass" type="password" placeholder="Mật khẩu" required>
+        <button class="btn">Đăng nhập</button>
+      </form>
+
+      <form onsubmit="register(event)" data-vis-when="out" style="display:block">
+        <h4>Đăng ký</h4>
+        <input id="regEmail" placeholder="Email" required>
+        <input id="regPass" type="password" placeholder="Mật khẩu (>=6 ký tự)" required>
+        <button class="btn">Tạo tài khoản</button>
+      </form>
+
+      <div data-vis-when="in" style="display:none">
+        <div style="margin:10px 0">Đang đăng nhập: <strong id="userEmail"></strong></div>
+        <button class="btn btn--ghost" onclick="logout()">Đăng xuất</button>
+      </div>
+    </div>
+
+    <script>
+      const __authBox = document.getElementById('authBox');
+      const __syncVis = () => {
+        if (!__authBox) return;
+        const state = __authBox.dataset.state;
+        __authBox.querySelectorAll('[data-vis-when]').forEach(el=>{
+          el.style.display = (el.getAttribute('data-vis-when') === state) ? 'block' : 'none';
+        });
+      };
+      new MutationObserver(__syncVis).observe(__authBox,{attributes:true});
+      __syncVis();
+    </script>
+
+    <div class="box" style="margin-top:16px">
+      <h3>Tạo ticket hỗ trợ</h3>
+      <form onsubmit="createTicket(event)">
+        <input id="tSubject" placeholder="Chủ đề" required>
+        <textarea id="tMessage" rows="4" placeholder="Mô tả vấn đề..." required></textarea>
+        <button class="btn">Gửi ticket</button>
+      </form>
+    </div>
+
+    <div style="margin-top:16px">
+      <h3>Ticket của tôi</h3>
+      <div id="myTickets" class="tickets-list"></div>
+    </div>
+  </div>
+</section>
+</footer>
+
+  <!-- Cart Drawer -->
+  <div id="cartDrawer" class="drawer">
+    <div class="drawer__overlay" id="closeCart"></div>
+    <div class="drawer__panel">
+      <div class="drawer__head">
+        <h3>Giỏ hàng</h3>
+        <button id="xCart" class="icon-btn" aria-label="Đóng">×</button>
+      </div>
+      <div id="drawerItems" class="drawer__items"></div>
+      <div class="drawer__foot">
+        <div class="drawer__total">Tổng: <strong id="drawerTotal">0₫</strong></div>
+        <a class="btn btn--full" href="checkout.html">Đặt hàng</a>
+      </div>
+    </div>
+  </div>
+
+<!-- Nút gọi điện -->
+  <a href="tel:+84905695949" class="phone-fab" target="_blank" rel="noopener" aria-label="Gọi điện">
+    <img src="img/phone.png" alt="Gọi điện" />
+  </a>
+<!-- Nút Facebook -->
+  <a href="https://www.facebook.com/dailythuoclao43" class="facebook-fab" target="_blank" rel="noopener" aria-label="Facebook">
+    <img src="img/facebook.png" alt="Facebook" />
+  </a>
+<!-- Nút Zalo -->
+  <a href="https://zalo.me/0905695949" class="zalo-fab" target="_blank" rel="noopener" aria-label="Chat Zalo">
+    <img src="img/Zalo_logo.jpg" alt="Zalo" />
+  </a>
+
+  <script src="assets/app.js"></script>
+  <div id="toast">Đã thêm vào giỏ hàng</div>
+
+<!-- Firebase Auth + Firestore -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { getAuth, onAuthStateChanged,
+           createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut }
+           from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+  import { getFirestore, collection, addDoc, serverTimestamp,
+           query, where, getDocs, orderBy }
+           from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+  const firebaseConfig = {
+  apiKey: "AIzaSyB-A0omawXnKjVdq_4ea3UWjJhAEpx-tSg",
+  authDomain: "tuananh-3b562.firebaseapp.com",
+  projectId: "tuananh-3b562",
+  storageBucket: "tuananh-3b562.firebasestorage.app",
+  messagingSenderId: "503117226992",
+  appId: "1:503117226992:web:d4d90849149a39182b3335",
+  measurementId: "G-P2DEDDNFH4"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db   = getFirestore(app);
+
+  const $ = s => document.querySelector(s);
+
+  onAuthStateChanged(auth, (user) => {
+    const box = $('#authBox');
+    const emailEl = document.getElementById('userEmail');
+    if (!box) return;
+    if (user){
+      box.dataset.state = 'in';
+      if (emailEl) emailEl.textContent = user.email || '';
+      loadMyTickets();
+    } else {
+      box.dataset.state = 'out';
+      if (emailEl) emailEl.textContent = '';
+      const t = $('#myTickets'); if (t) t.innerHTML = '<div class="muted">Bạn cần đăng nhập để xem ticket.</div>';
+    }
+  });
+
+  window.register = async (e) => {
+    e.preventDefault();
+    const email = $('#regEmail').value.trim();
+    const pass  = $('#regPass').value.trim();
+    await createUserWithEmailAndPassword(auth, email, pass);
+    alert('Tạo tài khoản thành công!');
+  };
+
+  window.login = async (e) => {
+    e.preventDefault();
+    const email = $('#logEmail').value.trim();
+    const pass  = $('#logPass').value.trim();
+    await signInWithEmailAndPassword(auth, email, pass);
+  };
+
+  window.logout = async () => { await signOut(auth); };
+
+  window.createTicket = async (e) => {
+    e.preventDefault();
+    const user = auth.currentUser;
+    if (!user) return alert('Vui lòng đăng nhập.');
+    const subject = $('#tSubject').value.trim();
+    const message = $('#tMessage').value.trim();
+    if (!subject || !message) return;
+    await addDoc(collection(db, 'tickets'), {
+      userId: user.uid,
+      email: user.email || '',
+      subject, message,
+      status: 'open',
+      createdAt: serverTimestamp()
+    });
+    e.target.reset();
+    alert('Đã tạo ticket. Chúng tôi sẽ phản hồi sớm!');
+    loadMyTickets();
+  };
+
+  async function loadMyTickets(){
+    const user = auth.currentUser;
+    if (!user) return;
+    const cont = $('#myTickets'); if (!cont) return;
+    cont.innerHTML = '';
+    const q = query(collection(db,'tickets'), where('userId','==', user.uid), orderBy('createdAt','desc'));
+    const snap = await getDocs(q);
+    if (snap.empty){ cont.innerHTML = '<div class="muted">Chưa có ticket.</div>'; return; }
+    snap.forEach(d=>{
+      const t = d.data();
+      const el = document.createElement('div');
+      el.className = 'box';
+      el.innerHTML = `<div><strong>${t.subject}</strong> <span class="muted">(${t.status||'open'})</span></div>
+                      <div style="margin-top:6px">${t.message}</div>`;
+      cont.appendChild(el);
+    });
+  }
+</script>
+
+</body>
+</html>
