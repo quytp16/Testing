@@ -14,6 +14,7 @@
     <div class="container header__inner">
       <a class="brand" href="#"><img src="img/logo.jpg" alt="" class="brand__logo"> <span>Tuấn Anh Điếu Cày</span></a>
       <nav class="nav">
+        <a href="flash.html">Flash Sale</a>
         <a href="#products">Sản phẩm</a>
         <a href="#featured">Nổi bật</a>
       </nav>
@@ -146,61 +147,7 @@
           <a class="link" href="https://maps.app.goo.gl/9sJ1fRQFprgf7jjb8" target="_blank" rel="noopener">Địa chỉ: 09 Tiên Sơn 10, Hoà Cường Nam, Hải Châu, Đà Nẵng </a>
         </div>
     </div>
-  
-<section class="section" id="support">
-  <div class="container">
-    <h2>Tài khoản &amp; Hỗ trợ</h2>
-
-    <div id="authBox" data-state="out" style="margin:10px 0">
-      <form onsubmit="login(event)" data-vis-when="out" style="display:block;margin-bottom:12px">
-        <h4>Đăng nhập</h4>
-        <input id="logEmail" placeholder="Email" required>
-        <input id="logPass" type="password" placeholder="Mật khẩu" required>
-        <button class="btn">Đăng nhập</button>
-      </form>
-
-      <form onsubmit="register(event)" data-vis-when="out" style="display:block">
-        <h4>Đăng ký</h4>
-        <input id="regEmail" placeholder="Email" required>
-        <input id="regPass" type="password" placeholder="Mật khẩu (>=6 ký tự)" required>
-        <button class="btn">Tạo tài khoản</button>
-      </form>
-
-      <div data-vis-when="in" style="display:none">
-        <div style="margin:10px 0">Đang đăng nhập: <strong id="userEmail"></strong></div>
-        <button class="btn btn--ghost" onclick="logout()">Đăng xuất</button>
-      </div>
-    </div>
-
-    <script>
-      const __authBox = document.getElementById('authBox');
-      const __syncVis = () => {
-        if (!__authBox) return;
-        const state = __authBox.dataset.state;
-        __authBox.querySelectorAll('[data-vis-when]').forEach(el=>{
-          el.style.display = (el.getAttribute('data-vis-when') === state) ? 'block' : 'none';
-        });
-      };
-      new MutationObserver(__syncVis).observe(__authBox,{attributes:true});
-      __syncVis();
-    </script>
-
-    <div class="box" style="margin-top:16px">
-      <h3>Tạo ticket hỗ trợ</h3>
-      <form onsubmit="createTicket(event)">
-        <input id="tSubject" placeholder="Chủ đề" required>
-        <textarea id="tMessage" rows="4" placeholder="Mô tả vấn đề..." required></textarea>
-        <button class="btn">Gửi ticket</button>
-      </form>
-    </div>
-
-    <div style="margin-top:16px">
-      <h3>Ticket của tôi</h3>
-      <div id="myTickets" class="tickets-list"></div>
-    </div>
-  </div>
-</section>
-</footer>
+  </footer>
 
   <!-- Cart Drawer -->
   <div id="cartDrawer" class="drawer">
@@ -233,102 +180,5 @@
 
   <script src="assets/app.js"></script>
   <div id="toast">Đã thêm vào giỏ hàng</div>
-
-<!-- Firebase Auth + Firestore -->
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-  import { getAuth, onAuthStateChanged,
-           createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut }
-           from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-  import { getFirestore, collection, addDoc, serverTimestamp,
-           query, where, getDocs, orderBy }
-           from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-
-  const firebaseConfig = {
-  apiKey: "AIzaSyB-A0omawXnKjVdq_4ea3UWjJhAEpx-tSg",
-  authDomain: "tuananh-3b562.firebaseapp.com",
-  projectId: "tuananh-3b562",
-  storageBucket: "tuananh-3b562.firebasestorage.app",
-  messagingSenderId: "503117226992",
-  appId: "1:503117226992:web:d4d90849149a39182b3335",
-  measurementId: "G-P2DEDDNFH4"
-  };
-
-  const app = initializeApp(firebaseConfig);
-  const auth = getAuth(app);
-  const db   = getFirestore(app);
-
-  const $ = s => document.querySelector(s);
-
-  onAuthStateChanged(auth, (user) => {
-    const box = $('#authBox');
-    const emailEl = document.getElementById('userEmail');
-    if (!box) return;
-    if (user){
-      box.dataset.state = 'in';
-      if (emailEl) emailEl.textContent = user.email || '';
-      loadMyTickets();
-    } else {
-      box.dataset.state = 'out';
-      if (emailEl) emailEl.textContent = '';
-      const t = $('#myTickets'); if (t) t.innerHTML = '<div class="muted">Bạn cần đăng nhập để xem ticket.</div>';
-    }
-  });
-
-  window.register = async (e) => {
-    e.preventDefault();
-    const email = $('#regEmail').value.trim();
-    const pass  = $('#regPass').value.trim();
-    await createUserWithEmailAndPassword(auth, email, pass);
-    alert('Tạo tài khoản thành công!');
-  };
-
-  window.login = async (e) => {
-    e.preventDefault();
-    const email = $('#logEmail').value.trim();
-    const pass  = $('#logPass').value.trim();
-    await signInWithEmailAndPassword(auth, email, pass);
-  };
-
-  window.logout = async () => { await signOut(auth); };
-
-  window.createTicket = async (e) => {
-    e.preventDefault();
-    const user = auth.currentUser;
-    if (!user) return alert('Vui lòng đăng nhập.');
-    const subject = $('#tSubject').value.trim();
-    const message = $('#tMessage').value.trim();
-    if (!subject || !message) return;
-    await addDoc(collection(db, 'tickets'), {
-      userId: user.uid,
-      email: user.email || '',
-      subject, message,
-      status: 'open',
-      createdAt: serverTimestamp()
-    });
-    e.target.reset();
-    alert('Đã tạo ticket. Chúng tôi sẽ phản hồi sớm!');
-    loadMyTickets();
-  };
-
-  async function loadMyTickets(){
-    const user = auth.currentUser;
-    if (!user) return;
-    const cont = $('#myTickets'); if (!cont) return;
-    cont.innerHTML = '';
-    const q = query(collection(db,'tickets'), where('userId','==', user.uid), orderBy('createdAt','desc'));
-    const snap = await getDocs(q);
-    if (snap.empty){ cont.innerHTML = '<div class="muted">Chưa có ticket.</div>'; return; }
-    snap.forEach(d=>{
-      const t = d.data();
-      const el = document.createElement('div');
-      el.className = 'box';
-      el.innerHTML = `<div><strong>${t.subject}</strong> <span class="muted">(${t.status||'open'})</span></div>
-                      <div style="margin-top:6px">${t.message}</div>`;
-      cont.appendChild(el);
-    });
-  }
-</script>
-
 </body>
 </html>
