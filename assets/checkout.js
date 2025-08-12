@@ -1,4 +1,4 @@
-// assets/checkout.js
+// checkout.js
 import { auth, db, functions } from './firebase-config.js';
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
 import { collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
@@ -92,6 +92,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
         localStorage.removeItem('cart');
       }
       else if (data.payment_method==='BANK'){
+        const { addDoc, collection } = await import("https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js");
         const odRef = await addDoc(collection(db,'orders'), {
           ...payloadBase,
           paymentMethod: 'BANK',
@@ -105,6 +106,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
         ok.style.display = 'block';
       }
       else {
+        const { addDoc, collection } = await import("https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js");
         await addDoc(collection(db,'orders'), {
           ...payloadBase,
           paymentMethod: data.payment_method,

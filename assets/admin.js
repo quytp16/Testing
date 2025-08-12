@@ -1,4 +1,4 @@
-// assets/admin.js
+// admin.js
 import { db } from "./firebase-config.js";
 import {
   collection, addDoc, updateDoc, deleteDoc, doc, getDoc,
