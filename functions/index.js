@@ -1,6 +1,6 @@
+
 // functions/index.js
-const { onCall, HttpsError } = require('firebase-functions/v2/https');
-const { onRequest } = require('firebase-functions/v2/https');
+const { onCall, HttpsError, onRequest } = require('firebase-functions/v2/https');
 const { defineSecret } = require('firebase-functions/params');
 const { initializeApp } = require('firebase-admin/app');
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
@@ -8,7 +8,7 @@ const { getFirestore, FieldValue } = require('firebase-admin/firestore');
 initializeApp();
 const db = getFirestore();
 
-// Auto-deduct wallet when placing order
+// --- Existing: place order and auto-deduct wallet ---
 exports.placeOrderWithWallet = onCall({ region: 'asia-southeast1' }, async (req) => {
   const uid = req.auth?.uid;
   if (!uid) throw new HttpsError('unauthenticated', 'Bạn phải đăng nhập.');
@@ -47,42 +47,80 @@ exports.placeOrderWithWallet = onCall({ region: 'asia-southeast1' }, async (req)
   return { ok: true, orderId };
 });
 
-// Bank webhook reconciliation for BANK payments
+// --- New: bank webhook with idempotent TOPUP-<uid> and ORDER-<id> handling ---
 const hookSecret = defineSecret('BANKHOOK_SECRET');
+
 exports.bankWebhook = onRequest({ region: 'asia-southeast1', secrets: [hookSecret] }, async (req, res) => {
-  const sign = req.get('x-hook-sign') || (req.get('authorization')||'').replace(/^Bearer\s+/i,'');
-  if (!sign || sign !== hookSecret.value()) {
+  // 1) Verify secret (provider must send header x-hook-sign: <secret> or Bearer <secret>)
+  const secret = hookSecret.value();
+  const headerSig = req.get('x-hook-sign') || (req.get('authorization')||'').replace(/^Bearer\s+/i,'');
+  if (!secret || !headerSig || headerSig !== secret) {
     return res.status(401).json({ ok:false, error:'Unauthorized' });
   }
 
-  const raw = req.body || {};
-  const list = Array.isArray(raw.data) ? raw.data : [raw];
+  // 2) Normalize payload list
+  const body = req.body || {};
+  const list = Array.isArray(body.data) ? body.data : Array.isArray(body) ? body : [body];
 
   const results = [];
   for (const tx of list) {
-    const amount = Number(tx.amount) || 0;
-    const desc = String(tx.description||'');
-    const m = /ORDER-([A-Za-z0-9_-]+)/.exec(desc);
-    if (!m) { results.push({ ignored:true, reason:'no-order-id' }); continue; }
-    const orderId = m[1];
+    // Provider-agnostic mapping - edit these if your provider uses other field names
+    const amount = Number(tx.amount || tx.totalAmount || tx.value || 0);
+    const desc   = String(tx.description || tx.content || tx.note || '');
+    const when   = tx.when || tx.time || tx.createdAt || Date.now();
+    const account= String(tx.account || tx.beneficiaryAccount || tx.toAccount || '');
+    const txId   = String(tx.txId || tx.id || tx.reference || `${account}-${when}-${amount}`);
 
-    try {
-      const orderRef = db.collection('orders').doc(orderId);
-      const snap = await orderRef.get();
-      if (!snap.exists) { results.push({ orderId, ignored:true, reason:'order-not-found' }); continue; }
-      const o = snap.data();
-      if (o.status === 'paid') { results.push({ orderId, ignored:true, reason:'already-paid' }); continue; }
-      if (o.paymentMethod !== 'BANK') { results.push({ orderId, ignored:true, reason:'not-bank' }); continue; }
-      if (o.status !== 'awaiting_bank') { results.push({ orderId, ignored:true, reason:'wrong-status' }); continue; }
+    if (!amount || amount <= 0) { results.push({ txId, ignored:true, reason:'no-amount' }); continue; }
 
-      const need = Number(o.total)||0;
-      if (amount < need) { results.push({ orderId, ignored:true, reason:`amount-not-enough(${amount}<${need})` }); continue; }
-
-      await orderRef.update({ status:'paid', paidAt: FieldValue.serverTimestamp() });
-      results.push({ orderId, ok:true, set:'paid' });
-    } catch (e) {
-      results.push({ orderId, ok:false, error: e.message||'unknown' });
+    // --- TOPUP flow: look for TOPUP-<uid> in transfer description ---
+    const mTop = /TOPUP-([A-Za-z0-9_-]{10,})/i.exec(desc);
+    if (mTop) {
+      const uidTop = mTop[1];
+      const txRef = db.collection('bank_txs').doc(txId);
+      try {
+        await db.runTransaction(async (t) => {
+          const done = await t.get(txRef);
+          if (done.exists) throw new Error('duplicate'); // idempotent
+          const userRef = db.collection('users').doc(uidTop);
+          const u = await t.get(userRef);
+          if (!u.exists) throw new Error('user-not-found');
+          const cur = Number(u.data().balance || 0);
+          t.set(txRef, { kind:'TOPUP', uid: uidTop, amount, desc, account, when, createdAt: FieldValue.serverTimestamp() });
+          t.update(userRef, { balance: cur + amount, updatedAt: FieldValue.serverTimestamp() });
+          const logRef = db.collection('wallet_logs').doc();
+          t.set(logRef, { uid: uidTop, type:'TOPUP', amount, txId, desc, account, when, createdAt: FieldValue.serverTimestamp() });
+        });
+        results.push({ txId, ok:true, action:'TOPUP', uid: uidTop, amount });
+      } catch (e) {
+        results.push({ txId, ok:false, action:'TOPUP', error: e.message });
+      }
+      continue;
     }
+
+    // --- ORDER flow: look for ORDER-<id> (mark paid if amount >= total) ---
+    const mOrder = /ORDER-([A-Za-z0-9_-]+)/i.exec(desc);
+    if (mOrder) {
+      const orderId = mOrder[1];
+      try {
+        const orderRef = db.collection('orders').doc(orderId);
+        await db.runTransaction(async (t) => {
+          const snap = await t.get(orderRef);
+          if (!snap.exists) throw new Error('order-not-found');
+          const o = snap.data();
+          if (o.status === 'paid') return; // idempotent
+          if (o.paymentMethod !== 'BANK') throw new Error('not-bank-order');
+          if (Number(o.total || 0) > amount) throw new Error(`amount-not-enough(${amount} < ${o.total})`);
+          t.update(orderRef, { status: 'paid', paidAt: FieldValue.serverTimestamp(), bankTxId: txId });
+        });
+        results.push({ txId, ok:true, action:'ORDER', orderId });
+      } catch (e) {
+        results.push({ txId, ok:false, action:'ORDER', error: e.message });
+      }
+      continue;
+    }
+
+    results.push({ txId, ignored:true, reason:'no-matching-pattern' });
   }
 
   return res.json({ ok:true, results });
