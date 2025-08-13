@@ -1,7 +1,7 @@
-// checkout.js
+
 import { auth, db, functions } from './firebase-config.js';
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
-import { collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+import { collection, addDoc, serverTimestamp, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 import { httpsCallable } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-functions.js";
 import { BANK } from './app-config.js';
 
@@ -19,103 +19,67 @@ function vietqrUrl({amount, addInfo}){
   return `${base}?${params.toString()}`;
 }
 
-function render(){
+let currentUser = null;
+let currentBalance = 0;
+
+onAuthStateChanged(auth, async (user) => {
+  if (!user) {
+    alert("Vui lòng đăng nhập trước khi thanh toán.");
+    window.location.href = "index.html";
+    return;
+  }
+  currentUser = user;
+  document.getElementById("meEmail").textContent = user.email;
+  const userRef = doc(db, "users", user.uid);
+  const snap = await getDoc(userRef);
+  if (snap.exists()) {
+    const data = snap.data();
+    document.getElementById("meName").textContent = data.name || "";
+    document.getElementById("meBalance").textContent = money(data.balance || 0);
+    currentBalance = data.balance || 0;
+  }
+  renderSummary();
+});
+
+function renderSummary(){
   const cart = loadCart();
-  const sumDiv = document.getElementById('summary');
-  sumDiv.innerHTML = '';
-  if (!cart.length){ sumDiv.innerHTML = '<div class="muted">Giỏ hàng trống. <a href="index.html">Quay lại mua hàng</a>.</div>'; }
-  else { cart.forEach(it=>{ const row = document.createElement('div'); row.style.display='flex'; row.style.justifyContent='space-between'; row.innerHTML = `<div>${it.name} <span class="muted">x${it.qty}</span></div><div><strong>${money(it.qty*it.price)}</strong></div>`; sumDiv.appendChild(row); }); }
-  const total = cart.reduce((s,i)=>s+i.qty*i.price,0);
-  document.getElementById('sumTotal').textContent = money(total);
-  return { cart, total };
+  const wrap = document.getElementById('summary');
+  if (!cart.length) {
+    wrap.innerHTML = '<p>Giỏ hàng trống.</p>';
+    return;
+  }
+  let sum = 0;
+  wrap.innerHTML = cart.map(i=>{
+    sum += (i.price||0) * (i.qty||1);
+    return `<div>${i.name} × ${i.qty}</div>`;
+  }).join('');
+  document.getElementById('total').textContent = money(sum);
 }
 
-const state = { user:null, orderId:null };
-
-onAuthStateChanged(auth, (u)=>{ state.user = u; });
-
-document.addEventListener('DOMContentLoaded', ()=>{
-  const { cart, total } = render();
-  const form = document.getElementById('payForm');
-  const guide = document.getElementById('guide');
-  const payment = document.getElementById('payment');
-  const qrBox = document.getElementById('qrBox');
-  const qrImg = document.getElementById('vietqrImg');
-  const qrNote = document.getElementById('qrNote');
-
-  function syncGuide(){
-    const v = payment.value;
-    guide.textContent = v==='WALLET' ? 'Thanh toán bằng ví: hệ thống sẽ tự trừ số dư ngay khi đặt.'
-                    : v==='BANK' ? 'Chuyển khoản qua VietQR theo mã hiển thị. Đơn sẽ tự ghi nhận khi bạn thanh toán.'
-                    : v==='MOMO' ? 'MoMo: sẽ gửi số khi xác nhận.'
-                    : 'COD: thanh toán khi nhận hàng.';
-    qrBox.style.display = (v==='BANK') ? 'block' : 'none';
+document.getElementById("btnCheckout").addEventListener("click", async ()=>{
+  const cart = loadCart();
+  if (!cart.length) {
+    alert("Giỏ hàng trống.");
+    return;
   }
-  payment.addEventListener('change', syncGuide); syncGuide();
-
-  form.addEventListener('input', ()=>{
-    if (payment.value !== 'BANK') return;
-    const data = Object.fromEntries(new FormData(form));
-    const add = (data.name?data.name:'') + (data.phone?` ${data.phone}`:'');
-    qrImg.src = vietqrUrl({ amount: total, addInfo: add || 'Thanh toan don hang' });
-    qrNote.textContent = `Chủ TK: ${BANK.accountName} — Ghi chú: ${add || 'Thanh toan don hang'}`;
-  });
-
-  form.addEventListener('submit', async (e)=>{
-    e.preventDefault();
-    const ok = document.getElementById('ok'), err = document.getElementById('err'); ok.style.display='none'; err.style.display='none';
-
-    const data = Object.fromEntries(new FormData(form));
-    const payloadBase = {
-      items: cart,
-      total,
-      address: data.address,
-      note: data.note||'',
-      userId: state.user?.uid || null,
-      user: state.user ? { email: state.user.email } : { email: data.email, name: data.name, phone: data.phone },
-      createdAt: serverTimestamp(),
-    };
-
-    try{
-      if (data.payment_method==='WALLET'){
-        if (!state.user){ alert('Vui lòng đăng nhập để dùng Ví tiền.'); return; }
-        const placeOrderWithWallet = httpsCallable(functions, 'placeOrderWithWallet');
-        const res = await placeOrderWithWallet({
-          items: cart,
-          total,
-          address: data.address,
-          note: data.note||'',
-        });
-        state.orderId = res.data?.orderId || null;
-        ok.textContent = 'Đặt hàng & trừ ví thành công!';
-        ok.style.display = 'block';
-        localStorage.removeItem('cart');
-      }
-      else if (data.payment_method==='BANK'){
-        const { addDoc, collection } = await import("https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js");
-        const odRef = await addDoc(collection(db,'orders'), {
-          ...payloadBase,
-          paymentMethod: 'BANK',
-          status: 'awaiting_bank',
-        });
-        state.orderId = odRef.id;
-        const addInfo = `ORDER-${odRef.id}`;
-        qrImg.src = vietqrUrl({ amount: total, addInfo });
-        qrNote.textContent = `Nội dung chuyển khoản: ${addInfo}`;
-        ok.textContent = 'Đã tạo đơn. Vui lòng quét mã để thanh toán!';
-        ok.style.display = 'block';
-      }
-      else {
-        const { addDoc, collection } = await import("https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js");
-        await addDoc(collection(db,'orders'), {
-          ...payloadBase,
-          paymentMethod: data.payment_method,
-          status: 'pending',
-        });
-        ok.textContent = 'Đặt hàng thành công!';
-        ok.style.display = 'block';
-        localStorage.removeItem('cart');
-      }
-    }catch(ex){ console.error(ex); err.style.display='block'; }
-  });
+  const payMethod = document.querySelector('input[name=payment]:checked')?.value;
+  let sum = cart.reduce((t,i)=> t+(i.price||0)*(i.qty||1),0);
+  if (payMethod === "wallet") {
+    if (currentBalance < sum) {
+      alert("Số dư không đủ.");
+      return;
+    }
+  }
+  const order = {
+    userId: currentUser.uid,
+    items: cart,
+    total: sum,
+    payment: payMethod,
+    status: payMethod==="wallet" ? "chờ admin" : "chưa thanh toán",
+    createdAt: serverTimestamp()
+  };
+  await addDoc(collection(db,"orders"), order);
+  localStorage.removeItem("cart");
+  alert("Đặt hàng thành công!");
+  window.location.href = "index.html";
 });
