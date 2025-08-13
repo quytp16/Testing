@@ -8,6 +8,25 @@
   <link rel="icon" href="img/logo.jpg"/>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap"/>
   <link rel="stylesheet" href="assets/style.css"/>
+  <style>
+    /* Auth modal */
+    .modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.5);z-index:60}
+    .modal.open{display:flex}
+    .modal__panel{background:#fff;border-radius:14px;box-shadow:0 10px 40px rgba(0,0,0,.35);width:100%;max-width:520px}
+    .modal__head{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid #e5e7eb}
+    .modal__body{padding:16px}
+    .tabs{display:flex;gap:6px;background:#f1f5f9;border-radius:10px;padding:6px;margin-bottom:12px}
+    .tabs button{flex:1;border:0;background:transparent;padding:8px 10px;border-radius:8px;cursor:pointer;font-weight:700}
+    .tabs button.active{background:#fff;border:1px solid #e5e7eb}
+
+    /* Admin panel */
+    .admin{margin-top:22px}
+    .admin .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .table{width:100%;border-collapse:collapse}
+    .table th,.table td{border:1px solid #e5e7eb;padding:8px;text-align:left}
+    .muted.small{font-size:12px;color:#64748b}
+    @media(max-width:900px){.admin .grid{grid-template-columns:1fr}}
+  </style>
 </head>
 <body>
 <header class="header">
@@ -43,28 +62,104 @@
   </div>
 </section>
 
+<!-- Ví tiền người dùng (hiện khi đã đăng nhập) -->
+<section class="section" id="wallet" style="display:none">
+  <div class="container">
+    <div class="section__head">
+      <h2>Ví tiền</h2>
+      <span class="muted">Số dư dùng để thanh toán đơn hàng</span>
+    </div>
+    <div class="box">
+      <div><strong>Tài khoản:</strong> <span id="meEmail">—</span></div>
+      <div><strong>Họ tên:</strong> <span id="meName">—</span></div>
+      <div style="margin:6px 0"><strong>Số dư:</strong> <span id="meBalance">0₫</span></div>
+      <div class="muted small">Để nạp tiền, liên hệ admin. Nếu chọn "Ví tiền" lúc đặt hàng, đơn sẽ chờ admin xác nhận trừ ví.</div>
+    </div>
+  </div>
+</section>
+
 <section class="section" id="products">
   <div class="container">
     <div class="section__head">
       <h2>Sản phẩm</h2>
-      <span class="muted">Bấm “Mua ngay” để thêm vào giỏ</span>
+      <span class="muted">Bấm ảnh hoặc “Mua ngay” để thêm vào giỏ</span>
     </div>
-    <div class="products"><!-- render by shop.js --></div>
+    <div class="products"><!-- được render từ Firestore --></div>
   </div>
 </section>
 
 <section class="section alt" id="featured">
   <div class="container">
     <div class="section__head"><h2>Sản phẩm nổi bật</h2></div>
-    <div class="products"><!-- render by shop.js --></div>
+    <div class="products"><!-- có thể render giống #products hoặc tự chọn --></div>
   </div>
 </section>
 
-<footer class="footer">
+<!-- KHU VỰC QUẢN TRỊ (chỉ hiện khi role=admin) -->
+<section class="section" id="adminPanel" style="display:none">
+  <div class="container">
+    <div class="section__head">
+      <h2>Quản trị</h2>
+      <span class="muted">Chỉ dành cho quản trị viên</span>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs" style="margin-bottom:10px">
+      <button data-tab="#tabProducts" class="active">Sản phẩm</button>
+      <button data-tab="#tabUsers">Người dùng</button>
+      <button data-tab="#tabOrders">Đơn hàng</button>
+    </div>
+
+    <!-- Tab: Products -->
+    <div id="tabProducts" class="admin">
+      <h3>Thêm / Sửa sản phẩm</h3>
+      <div class="grid">
+        <label>Tên sản phẩm<input id="ad_name" type="text" placeholder="VD: Điếu cày..."></label>
+        <label>Giá hiện tại (VND)<input id="ad_price" type="number" min="0" step="1000"></label>
+        <label>Giá gạch (tuỳ chọn)<input id="ad_original_price" type="number" min="0" step="1000"></label>
+        <label>Ảnh (URL)<input id="ad_image" type="url" placeholder="https://..."></label>
+        <label style="display:flex;gap:8px;align-items:center"><input id="ad_is_sale" type="checkbox"> Flash Sale</label>
+        <input id="ad_docId" type="hidden">
+        <div>
+          <button id="ad_save" class="btn">Lưu</button>
+          <button id="ad_reset" class="btn btn--ghost">Reset</button>
+        </div>
+      </div>
+
+      <h3 style="margin-top:14px">Danh sách</h3>
+      <table class="table">
+        <thead><tr><th>Tên</th><th>Giá</th><th>Giá gạch</th><th>Flash</th><th>Ảnh</th><th>Hành động</th></tr></thead>
+        <tbody id="ad_rows"></tbody>
+      </table>
+    </div>
+
+    <!-- Tab: Users -->
+    <div id="tabUsers" class="admin" style="display:none">
+      <h3>Người dùng</h3>
+      <table class="table">
+        <thead><tr><th>Email</th><th>Tên</th><th>Role</th><th>Số dư</th><th>Hành động</th></tr></thead>
+        <tbody id="user_rows"></tbody>
+      </table>
+      <p class="muted small">Gợi ý: dùng “Nạp/Rút” để điều chỉnh số dư. Chỉ admin mới được phép thay đổi role và số dư.</p>
+    </div>
+
+    <!-- Tab: Orders -->
+    <div id="tabOrders" class="admin" style="display:none">
+      <h3>Đơn hàng</h3>
+      <table class="table">
+        <thead><tr><th>Mã</th><th>Khách</th><th>Tổng</th><th>PTTT</th><th>Trạng thái</th><th>Hành động</th></tr></thead>
+        <tbody id="order_rows"></tbody>
+      </table>
+      <p class="muted small">Đơn thanh toán bằng “Ví tiền” sẽ ở trạng thái <strong>chờ admin</strong>. Bấm “Xác nhận trừ ví” để trừ số dư và đánh dấu đã thanh toán.</p>
+    </div>
+  </div>
+</section>
+
+<footer class="footer" id="contact">
   <div class="container footer__bottom">
     <span>© <script>document.write(new Date().getFullYear())</script> Tuấn Anh Điếu Cày</span>
     <div class="footer__links">
-      <a class="link" href="https://maps.app.goo.gl/9sJ1fRQFprgf7jjb8" target="_blank" rel="noopener">09 Tiên Sơn 10, Hoà Cường Nam, Hải Châu, Đà Nẵng</a>
+      <a class="link" href="https://maps.app.goo.gl/9sJ1fRQFprgf7jjb8" target="_blank" rel="noopener">Địa chỉ: 09 Tiên Sơn 10, Hoà Cường Nam, Hải Châu, Đà Nẵng </a>
     </div>
   </div>
 </footer>
@@ -82,17 +177,107 @@
   </div>
 </div>
 
+<!-- Nút nổi -->
 <a class="phone-fab" href="tel:+84905695949" aria-label="Gọi điện" target="_blank" rel="noopener"><img src="img/phone.png" alt="Gọi điện"/></a>
 <a class="facebook-fab" href="https://www.facebook.com/dailythuoclao43" aria-label="Facebook" target="_blank" rel="noopener"><img src="img/facebook.png" alt="Facebook"/></a>
 <a class="zalo-fab" href="https://zalo.me/0905695949" aria-label="Chat Zalo" target="_blank" rel="noopener"><img src="img/Zalo_logo.jpg" alt="Zalo"/></a>
 
 <script src="app.js"></script>
 <div id="toast">Đã thêm vào giỏ hàng</div>
-
 <script type="module" src="assets/firebase-config.js"></script>
 <script type="module" src="assets/shop.js"></script>
-<script type="module" src="assets/auth.js"></script>
 <script type="module" src="assets/admin.js"></script>
+<script>
+  // Tabs in admin
+  document.addEventListener('click', (e)=>{
+    const btn = e.target.closest('.tabs button');
+    if(!btn) return;
+    document.querySelectorAll('.tabs button').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    const id = btn.getAttribute('data-tab');
+    ['#tabProducts', '#tabUsers', '#tabOrders'].forEach(sel=>{
+      const el = document.querySelector(sel); if (el) el.style.display = (sel===id)?'block':'none';
+    });
+  });
+</script>
 <script type="module" src="assets/topup.js"></script>
+
+<!-- Auth Modal (added) -->
+<div class="modal" id="authModal">
+  <div class="modal__panel">
+    <div class="modal__head">
+      <strong>Tài khoản</strong>
+      <button class="icon-btn" id="closeAuth" aria-label="Đóng">×</button>
+    </div>
+    <div class="modal__body">
+      <div class="tabs">
+        <button data-tab="#tabLogin" class="active">Đăng nhập</button>
+        <button data-tab="#tabSignup">Đăng ký</button>
+      </div>
+
+      <!-- Tab: Đăng nhập -->
+      <div id="tabLogin">
+        <form id="formLogin" class="form-grid">
+          <label>Email
+            <input name="email" type="email" required placeholder="you@email.com">
+          </label>
+          <label>Mật khẩu
+            <input name="password" type="password" required placeholder="••••••••">
+          </label>
+          <button class="btn" type="submit">Đăng nhập</button>
+        </form>
+      </div>
+
+      <!-- Tab: Đăng ký -->
+      <div id="tabSignup" style="display:none">
+        <form id="formSignup" class="form-grid">
+          <label>Họ và tên
+            <input name="name" required placeholder="Họ tên của bạn">
+          </label>
+          <label>Email
+            <input name="email" type="email" required placeholder="you@email.com">
+          </label>
+
+          <!-- 2 trường mới -->
+          <label>Số điện thoại
+            <input name="phone" type="tel" required placeholder="VD: 0905 123 456">
+          </label>
+          <label>Địa chỉ
+            <input name="address" required placeholder="VD: 09 Tiên Sơn 10, Hải Châu, Đà Nẵng">
+          </label>
+
+          <label>Mật khẩu
+            <input name="password" type="password" required placeholder="••••••••">
+          </label>
+          <button class="btn" type="submit">Đăng ký</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Mở modal khi bấm nút "Đăng nhập"
+  document.getElementById('btnAccount')?.addEventListener('click', ()=>{
+    if (window.__SIGNED_IN) return;
+    document.getElementById('authModal')?.classList.add('open');
+  });
+  // Đóng modal
+  document.getElementById('closeAuth')?.addEventListener('click', ()=>{
+    document.getElementById('authModal')?.classList.remove('open');
+  });
+  // Tabs
+  document.addEventListener('click', (e)=>{
+    const btn = e.target.closest('.tabs button'); if(!btn) return;
+    document.querySelectorAll('.tabs button').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    const id = btn.dataset.tab;
+    document.querySelector('#tabLogin').style.display = (id === '#tabLogin') ? 'block' : 'none';
+    document.querySelector('#tabSignup').style.display = (id === '#tabSignup') ? 'block' : 'none';
+  });
+</script>
+
+
+<script type="module" src="assets/auth.js"></script>
 </body>
 </html>

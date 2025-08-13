@@ -1,115 +1,93 @@
-
-// assets/shop.js — Render products to .products grids (homepage + flash-sale)
-// Requires: firebase-config.js exports db; Firestore has collection 'products'
+// shop.js
 import { db } from './firebase-config.js';
 import {
   collection, getDocs, query, where, orderBy, limit
-} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+} from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js';
 
-const money = n => (Number(n)||0).toLocaleString('vi-VN') + '₫';
-const $ = (s)=>document.querySelector(s);
+const money = n => (n||0).toLocaleString('vi-VN') + '₫';
 
-/* ---------- Card renderer (4:3 image, consistent with style.css) ---------- */
+function addToCart(item){
+  const cart = JSON.parse(localStorage.getItem('cart')||'[]');
+  const idx = cart.findIndex(x => x.id === item.id);
+  if (idx >= 0) cart[idx].qty += 1;
+  else cart.push({ id: item.id, name: item.name, price: item.price, image: item.image, qty: 1 });
+  localStorage.setItem('cart', JSON.stringify(cart));
+  const t = document.getElementById('toast');
+  if (t){ t.textContent = 'Đã thêm vào giỏ hàng'; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'), 1500); }
+  const cc = document.getElementById('cartCount');
+  if (cc){ const total = cart.reduce((s,i)=>s+i.qty,0); cc.textContent = total; }
+}
+
 function cardHTML(p){
   return `
-  <div class="card">
-    <div class="product__thumb">
-      ${p.is_sale ? `<span class="product__badge">SALE</span>` : ''}
+  <div class="product">
+    <div class="product__media">
       <img src="${p.image || 'img/logo.jpg'}" alt="${p.name || ''}"/>
     </div>
     <div class="product__body">
       <h3 class="product__title">${p.name || ''}</h3>
       <div class="product__price">
         <span class="price">${money(p.price||0)}</span>
-        ${p.original_price ? `<del>${money(p.original_price)}</del>` : ''}
+        ${p.original_price ? `<span class="price--strike">${money(p.original_price)}</span>` : ''}
       </div>
-      <div class="product__actions">
-        <button class="btn buy-now" data-id="${p.id}" data-name="${p.name||''}" data-price="${Number(p.price||0)}" data-image="${p.image||''}">Mua ngay</button>
-      </div>
+      <button class="btn buy-now" data-id="${p.id}">Mua ngay</button>
     </div>
   </div>`;
 }
 
-/* ---------- Fetch helpers ---------- */
-async function fetchAllProducts(){
-  const snap = await getDocs(query(collection(db,'products'), orderBy('name', 'asc')));
-  return snap.docs.map(d => ({ id:d.id, ...d.data() }));
-}
-async function fetchFlashSale(){
-  const snap = await getDocs(query(collection(db,'products'), where('is_sale','==', true), orderBy('name','asc')));
-  return snap.docs.map(d => ({ id:d.id, ...d.data() }));
-}
-async function fetchFeatured(){
-  // Featured = đang sale, hoặc lấy vài sản phẩm đầu
-  const sale = await fetchFlashSale();
-  if (sale.length) return sale;
-  const snap = await getDocs(query(collection(db,'products'), orderBy('name','asc'), limit(8)));
-  return snap.docs.map(d => ({ id:d.id, ...d.data() }));
-}
-
-/* ---------- Render helpers ---------- */
-function bindBuyNow(container){
-  container.addEventListener('click', (e)=>{
-    const btn = e.target.closest('.buy-now');
-    if (!btn) return;
-    const item = {
-      id: btn.dataset.id,
-      name: btn.dataset.name,
-      price: Number(btn.dataset.price||0),
-      image: btn.dataset.image || '',
-      qty: 1
-    };
-    if (typeof window.addToCart === 'function') {
-      window.addToCart(item);
-    } else {
-      // Minimal local cart add (fallback)
-      try {
-        const cart = JSON.parse(localStorage.getItem('cart')||'[]');
-        const idx = cart.findIndex(x => String(x.id) === String(item.id));
-        if (idx >= 0) cart[idx].qty = (Number(cart[idx].qty)||1) + 1;
-        else cart.push(item);
-        localStorage.setItem('cart', JSON.stringify(cart));
-        alert('Đã thêm vào giỏ hàng');
-      } catch {}
-    }
-  });
-}
-
-async function renderTo(containerSelector, productsPromise){
-  const el = $(containerSelector);
-  if (!el) return;
-  el.innerHTML = '<div class="muted">Đang tải...</div>';
-  try{
-    const list = await productsPromise;
-    if (!list.length){
-      el.innerHTML = '<div class="muted">Chưa có sản phẩm.</div>';
-      return;
-    }
-    el.innerHTML = list.map(cardHTML).join('');
-    bindBuyNow(el);
-  }catch(e){
+async function _safeGetDocs(qry, fallback){
+  try { return await getDocs(qry); }
+  catch(e){
+    if (fallback){ try { return await getDocs(fallback); } catch(ex){ console.error(ex); throw ex; } }
     console.error(e);
-    el.innerHTML = '<div class="muted">Lỗi tải sản phẩm.</div>';
+    throw e;
   }
 }
 
-/* ---------- Public render APIs ---------- */
-export async function renderProducts(opts={}){
-  const selector = opts.container || '#products .products';
-  await renderTo(selector, fetchAllProducts());
-}
-export async function renderFeatured(opts={}){
-  const selector = opts.container || '#featured .products';
-  await renderTo(selector, fetchFeatured());
-}
-export async function renderFlashSale(opts={}){
-  const selector = opts.container || '.products';
-  await renderTo(selector, fetchFlashSale());
+export async function renderFlashSale({ container = '#flashList' } = {}){
+  const el = document.querySelector(container);
+  if (!el) return;
+  el.innerHTML = '<div class="muted">Đang tải...</div>';
+  const col = collection(db, 'products');
+  const qMain = query(col, where('is_sale','==', true), orderBy('createdAt','desc'));
+  const qFallback = query(col, where('is_sale','==', true)); // nếu thiếu index
+
+  const snap = await _safeGetDocs(qMain, qFallback);
+  if (snap.empty){ el.innerHTML = '<div class="muted">Chưa có sản phẩm Flash Sale.</div>'; return; }
+
+  const items = [];
+  snap.forEach(d => items.push({ id: d.id, ...d.data() }));
+  el.innerHTML = items.map(cardHTML).join('');
+
+  el.querySelectorAll('.buy-now').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const p = items.find(x => x.id === btn.dataset.id);
+      if (p) addToCart(p);
+    });
+  });
 }
 
-/* ---------- Auto-init on pages that have matching containers ---------- */
+export async function renderProducts({ container = '#products .products' } = {}){
+  const el = document.querySelector(container);
+  if (!el) return;
+  el.innerHTML = '<div class="muted">Đang tải...</div>';
+  const col = collection(db, 'products');
+  const qMain = query(col, orderBy('createdAt','desc'), limit(24));
+  const snap = await _safeGetDocs(qMain);
+  const items = [];
+  snap.forEach(d => items.push({ id: d.id, ...d.data() }));
+  if (!items.length){ el.innerHTML = '<div class="muted">Chưa có sản phẩm.</div>'; return; }
+  el.innerHTML = items.map(cardHTML).join('');
+  el.querySelectorAll('.buy-now').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const p = items.find(x => x.id === btn.dataset.id);
+      if (p) addToCart(p);
+    });
+  });
+}
+
+// auto render products if container exists (homepage)
 document.addEventListener('DOMContentLoaded', ()=>{
-  if (document.querySelector('#products .products')) renderProducts();
-  if (document.querySelector('#featured .products')) renderFeatured();
-  // Flash-sale page will call renderFlashSale directly in its own script.
+  const hasHomeProducts = document.querySelector('#products .products');
+  if (hasHomeProducts) renderProducts({ container: '#products .products' });
 });
