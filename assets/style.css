@@ -52,7 +52,6 @@ img{max-width:100%;display:block}
 
 /* Drawer */
 .drawer{position:fixed;inset:0;display:none;z-index:1000;}
-.drawer.open{display:block;}
 .drawer.open .drawer__overlay{opacity:1;}
 .drawer__overlay{
   position:absolute;inset:0;background:rgba(0,0,0,.5);
