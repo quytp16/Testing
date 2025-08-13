@@ -1,5 +1,11 @@
 // admin.js
-import { db } from "./firebase-config.js";
+import { db   if (btn){ btn.disabled = false; btn.textContent = "Xác nhận trừ ví"; }
+  } catch(e){
+    console.error(e);
+    alert("Lỗi khi xác nhận trừ ví: " + (e?.message||e));
+    if (btn){ btn.disabled = false; btn.textContent = "Xác nhận trừ ví"; }
+  }
+} from "./firebase-config.js";
 import {
   collection, addDoc, updateDoc, deleteDoc, doc, getDoc,
   onSnapshot, orderBy, query, serverTimestamp
@@ -146,19 +152,28 @@ function renderOrderActions(o){
   }
   return '';
 }
+function showToast(msg){
+  const t = document.getElementById('toast');
+  if (t){ t.textContent = msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'), 1600); }
+  else alert(msg);
+}
 async function confirmWallet(id){
-  const ref = doc(db,'orders', id);
+  const btn = document.querySelector(`[data-confirm-wallet="${id}"]`);
+  if (btn){ btn.disabled = True; btn.textContent = "Đang xác nhận..."; }
+  try { const ref = doc(db,'orders', id);
   const snap = await getDoc(ref); const o = snap.data();
   if (!o) return;
   const uref = doc(db,'users', o.userId);
   const us = await getDoc(uref); const cur = (us.data()?.balance)||0;
   if (cur < (o.total||0)) { alert('Số dư không đủ'); return; }
   await updateDoc(uref, { balance: cur - (o.total||0), updatedAt: serverTimestamp() });
-  await updateDoc(ref, { status: 'paid', paidAt: serverTimestamp() });
+  await updateDoc(ref, { status: 'paid', paidAt: serverTimestamp() }); showToast('Đã xác nhận trừ ví và đánh dấu đã thanh toán');
 }
 async function markPaid(id){
-  const ref = doc(db,'orders', id);
-  await updateDoc(ref, { status: 'paid', paidAt: serverTimestamp() });
+  const btn = document.querySelector(`[data-mark-paid="${id}"]`);
+  if (btn){ btn.disabled = true; btn.textContent = "Đang cập nhật..."; }
+  try { const ref = doc(db,'orders', id);
+  await updateDoc(ref, { status: 'paid', paidAt: serverTimestamp() }); showToast('Đã xác nhận trừ ví và đánh dấu đã thanh toán');
 }
 
 // Boot
