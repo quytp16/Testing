@@ -11,7 +11,6 @@
   const totalEl    = $('#drawerTotal');
   const countEl    = $('#cartCount');
   const toastEl    = $('#toast');
-
   // ---- Utils
   const fmt = (n) => new Intl.NumberFormat('vi-VN').format(Number(n) || 0) + '₫';
 
