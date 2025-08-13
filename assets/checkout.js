@@ -71,22 +71,35 @@ ${lines||'(trống)'}`
 async function sendOrderEmail({ id, method, total, items, customer }) {
   if (!FORMSPREE_ENDPOINT) return;
   try {
-    const subject = `🛒 Đơn hàng mới #${id||'N/A'} – ${method}`;
-    const html = buildEmailHTML({ id, method, total, items, customer });
-    const text = buildEmailText({ id, method, total, items, customer });
+    const subject = `Đơn hàng mới – ${customer?.email || 'khách'} – ${method}`;
 
     const body = new FormData();
     body.append('subject', subject);
-    body.append('message', html);
-    body.append('_format', 'html');
-    body.append('alt_text', text);
 
-    if (customer.email) body.append('_cc', customer.email);
-    if (Array.isArray(BCC_EMAILS)) { BCC_EMAILS.forEach(e => e && body.append('_bcc', e)); }
+    // Nếu cần vẫn gửi kèm mã đơn, tổng tiền trong form data
+    body.append('order_id', id || 'N/A');
+    body.append('total', total || 0);
+    body.append('payment_method', method || '');
+    
+    if (customer?.email) {
+      body.append('email', customer.email);
+      body.append('_replyto', customer.email);
+      body.append('_cc', customer.email);
+    }
+    if (Array.isArray(BCC_EMAILS)) {
+      BCC_EMAILS.forEach(e => e && body.append('_bcc', e));
+    }
 
-    await fetch(FORMSPREE_ENDPOINT, { method: 'POST', body });
-  } catch (e) { console.warn('Send mail failed:', e); }
+    await fetch(FORMSPREE_ENDPOINT, {
+      method: 'POST',
+      body,
+      headers: { 'Accept': 'application/json' }
+    });
+  } catch (e) {
+    console.warn('Send mail failed:', e);
+  }
 }
+
 
 // --- Cart & account rendering ---
 function renderCart(){
