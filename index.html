@@ -259,6 +259,7 @@
 <script>
   // Mở modal khi bấm nút "Đăng nhập"
   document.getElementById('btnAccount')?.addEventListener('click', ()=>{
+    if (window.__SIGNED_IN) return;
     document.getElementById('authModal')?.classList.add('open');
   });
   // Đóng modal
