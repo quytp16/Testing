@@ -41,40 +41,33 @@
   }
 
   // ---- Render items
-  function renderDrawer() {
-    if (!listEl || !totalEl) return;
-    const cart = loadCart();
-    if (!cart.length) {
-      listEl.innerHTML = '<div class="muted" style="padding:8px 0">Giỏ hàng trống.</div>';
-      totalEl.textContent = fmt(0);
-      updateBadge(cart);
-      return;
-    }
-    let sum = 0;
-    listEl.innerHTML = cart.map((i, idx) => {
-      const price = Number(i.price || 0);
-      const qty = Number(i.qty || 1);
-      const line = price * qty;
-      sum += line;
-      return `
-        <div class="drawer__item" data-idx="${idx}" style="display:flex;gap:10px;align-items:center">
-          <img src="${i.image || ''}" alt="" style="width:56px;height:56px;object-fit:cover;border-radius:8px" onerror="this.style.display='none'">
-          <div style="flex:1">
-            <div style="font-weight:600">${i.name || 'Sản phẩm'}</div>
-            <div class="muted" style="font-size:12px">${fmt(price)} × ${qty}</div>
-            <div class="qty" style="display:flex;gap:6px;align-items:center;margin-top:6px">
-              <button class="qty__btn" data-act="dec">-</button>
-              <input class="qty__input" type="number" min="1" value="${qty}" style="width:54px;text-align:center">
-              <button class="qty__btn" data-act="inc">+</button>
-              <button class="icon-btn" data-act="remove" aria-label="Xóa">×</button>
-            </div>
-          </div>
-          <div style="min-width:96px;text-align:right;font-weight:700">${fmt(line)}</div>
-        </div>`;
-    }).join('');
-    totalEl.textContent = fmt(sum);
+function renderDrawer() {
+  if (!listEl) return;
+  const cart = loadCart();
+  if (!cart.length) {
+    listEl.innerHTML = '<div class="muted" style="padding:8px 0">Giỏ hàng trống.</div>';
+    totalEl.textContent = fmt(0);
     updateBadge(cart);
+    return;
   }
+  let sum = 0;
+  listEl.innerHTML = cart.map((i, idx) => {
+    const price = Number(i.price || 0);
+    const qty = Number(i.qty || 1);
+    sum += price * qty;
+    return `
+      <div class="drawer__item" data-idx="${idx}" style="display:flex;justify-content:space-between;align-items:center;gap:10px">
+        <div style="font-weight:600">${i.name || 'Sản phẩm'}</div>
+        <div class="qty" style="display:flex;gap:6px;align-items:center">
+          <button class="qty__btn" data-act="dec">-</button>
+          <input class="qty__input" type="number" min="1" value="${qty}" style="width:54px;text-align:center">
+          <button class="qty__btn" data-act="inc">+</button>
+        </div>
+      </div>`;
+  }).join('');
+  totalEl.textContent = fmt(sum);
+  updateBadge(cart);
+}
 
   // ---- Event delegation for qty/remove
   listEl?.addEventListener('click', (e) => {
