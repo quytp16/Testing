@@ -202,5 +202,80 @@
   });
 </script>
 <script type="module" src="assets/topup.js"></script>
+
+<!-- Auth Modal (added) -->
+<div class="modal" id="authModal">
+  <div class="modal__panel">
+    <div class="modal__head">
+      <strong>Tài khoản</strong>
+      <button class="icon-btn" id="closeAuth" aria-label="Đóng">×</button>
+    </div>
+    <div class="modal__body">
+      <div class="tabs">
+        <button data-tab="#tabLogin" class="active">Đăng nhập</button>
+        <button data-tab="#tabSignup">Đăng ký</button>
+      </div>
+
+      <!-- Tab: Đăng nhập -->
+      <div id="tabLogin">
+        <form id="formLogin" class="form-grid">
+          <label>Email
+            <input name="email" type="email" required placeholder="you@email.com">
+          </label>
+          <label>Mật khẩu
+            <input name="password" type="password" required placeholder="••••••••">
+          </label>
+          <button class="btn" type="submit">Đăng nhập</button>
+        </form>
+      </div>
+
+      <!-- Tab: Đăng ký -->
+      <div id="tabSignup" style="display:none">
+        <form id="formSignup" class="form-grid">
+          <label>Họ và tên
+            <input name="name" required placeholder="Họ tên của bạn">
+          </label>
+          <label>Email
+            <input name="email" type="email" required placeholder="you@email.com">
+          </label>
+
+          <!-- 2 trường mới -->
+          <label>Số điện thoại
+            <input name="phone" type="tel" required placeholder="VD: 0905 123 456">
+          </label>
+          <label>Địa chỉ
+            <input name="address" required placeholder="VD: 09 Tiên Sơn 10, Hải Châu, Đà Nẵng">
+          </label>
+
+          <label>Mật khẩu
+            <input name="password" type="password" required placeholder="••••••••">
+          </label>
+          <button class="btn" type="submit">Đăng ký</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Mở modal khi bấm nút "Đăng nhập"
+  document.getElementById('btnAccount')?.addEventListener('click', ()=>{
+    document.getElementById('authModal')?.classList.add('open');
+  });
+  // Đóng modal
+  document.getElementById('closeAuth')?.addEventListener('click', ()=>{
+    document.getElementById('authModal')?.classList.remove('open');
+  });
+  // Tabs
+  document.addEventListener('click', (e)=>{
+    const btn = e.target.closest('.tabs button'); if(!btn) return;
+    document.querySelectorAll('.tabs button').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    const id = btn.dataset.tab;
+    document.querySelector('#tabLogin').style.display = (id === '#tabLogin') ? 'block' : 'none';
+    document.querySelector('#tabSignup').style.display = (id === '#tabSignup') ? 'block' : 'none';
+  });
+</script>
+
 </body>
 </html>
