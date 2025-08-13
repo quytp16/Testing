@@ -89,6 +89,77 @@
     body { padding-bottom: max(0px, env(safe-area-inset-bottom)); }
   }
 </style>
+<style>
+  /* === iOS Safari small-screen wrap fixes === */
+  /* 1) Make header CTA container wrap safely without clipping children */
+  .header__cta {
+    overflow: visible;
+  }
+  /* 2) Prevent flex children from clipping their own content on iOS */
+  .header__cta > * { min-width: 0; }
+  /* 3) Let button text wrap instead of being cut off */
+  .btn {
+    white-space: normal;
+    line-height: 1.3;
+    word-break: break-word;
+    -webkit-hyphens: auto;
+    hyphens: auto;
+  }
+  /* 4) On very narrow screens, stack the actions full-width for stability */
+  @media (max-width: 420px) {
+    .header__cta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .header__cta > * {
+      flex: 1 1 100%;
+      min-width: 0;
+    }
+    /* Make buttons more tappable and avoid truncation */
+    .btn {
+      width: 100%;
+      justify-content: center;
+      padding: clamp(8px, 2.2vw, 12px) clamp(12px, 4vw, 18px);
+    }
+    /* Icon-only buttons should not stretch */
+    .icon-btn {
+      flex: 0 0 auto;
+      width: clamp(28px, 8vw, 36px);
+      height: clamp(28px, 8vw, 36px);
+    }
+  }
+  /* 5) Utility: ensure any text container inside buttons can wrap */
+  .btn > span, .btn > strong, .btn > em { white-space: normal; }
+</style>
+
+
+
+<style>
+  /* iOS Safari: wrap-friendly buttons without text cut-off */
+  .header__cta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .header__cta .btn, .header__cta button {
+    white-space: normal !important;
+    word-break: break-word;
+    min-width: auto;
+    flex: 1 1 auto;
+    max-width: 100%;
+    text-align: center;
+  }
+  /* Prevent icon + text overlap */
+  .header__cta .btn i, .header__cta button i {
+    margin-right: 4px;
+  }
+  /* Ensure font-size adjusts but never below 14px */
+  .header__cta .btn, .header__cta button {
+    font-size: clamp(14px, 3.5vw, 16px);
+    padding: clamp(6px, 2vw, 10px) clamp(10px, 3vw, 14px);
+  }
+</style>
 
 </head>
 <body>
