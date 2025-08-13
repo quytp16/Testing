@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=yes">
+  <meta name="format-detection" content="telephone=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+<title>Thanh toán — Tuấn Anh Điếu Cày</title>
+  <link rel="icon" href="img/logo.jpg"/>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap"/>
+  <link rel="stylesheet" href="assets/style.css"/>
+<style>
+  /* iOS Safari scaling & safe-area tweaks */
+  html { -webkit-text-size-adjust: 100%; }
+  body { min-height: 100dvh; }
+  img, video { max-width: 100%; height: auto; }
+  /* Prevent zoom on inputs by keeping font-size >= 16px */
+  input, select, textarea { font-size: 16px; }
+  /* Respect iPhone safe areas for full-bleed headers/footers if any */
+  :root { padding-top: env(safe-area-inset-top); padding-right: env(safe-area-inset-right); padding-bottom: env(safe-area-inset-bottom); padding-left: env(safe-area-inset-left); }
+</style>
+</head>
+<body>
+<header class="header">
+  <div class="container header__inner">
+    <a class="brand" href="index.html"><img class="brand__logo" src="img/logo.jpg" alt=""/> <span>Tuấn Anh Điếu Cày</span></a>
+    <nav class="nav"><a href="index.html#products">Sản phẩm</a><a href="flash-sale.html">Flash Sale</a></nav>
+    <div class="header__cta"><a class="btn" href="index.html">Quay lại</a></div>
+  </div>
+</header>
+<section class="checkout"><div class="container">
+  <h1>Thanh toán</h1>
+  <div class="checkout__wrap">
+    <!-- Box: Tóm tắt + thông tin tài khoản -->
+    <div class="box">
+      <h3>Thông tin đơn hàng</h3>
+      <div id="summary"></div>
+      <div class="total"><span>Tổng cộng:</span><strong id="sumTotal">0₫</strong></div>
+      <div id="acctBox" class="box" style="margin-top:10px; display:none">
+        <div><strong>Email:</strong> <span id="meEmail">—</span></div>
+        <div><strong>Họ tên:</strong> <span id="meName">—</span></div>
+        <div><strong>Số dư ví:</strong> <span id="meBalance">0₫</span></div>
+      </div>
+    </div>
+
+    <!-- Box: VietQR (chỉ hiện khi chọn BANK) -->
+    <div id="qrBox" class="box" style="display:none">
+      <h3>Chuyển khoản VietQR</h3>
+      <img id="vietqrImg" alt="VietQR" style="max-width:320px;width:100%;height:auto"/>
+      <div class="muted small" id="qrNote"></div>
+    </div>
+
+    <!-- Box: Form khách hàng -->
+    <div class="box">
+      <h3>Thông tin khách hàng</h3>
+      <form id="payForm" class="form-grid">
+        <div><label>Họ và tên</label><input name="name" required></div>
+        <div><label>Số điện thoại</label><input name="phone" required></div>
+        <div><label>Email</label><input name="email" type="email" required></div>
+        <div>
+          <label>Phương thức thanh toán</label>
+          <select id="payment" name="payment_method" required>
+            <option value="COD">COD</option>
+            <option value="BANK">Chuyển khoản</option>
+            <option value="MOMO">MoMo</option>
+            <option value="WALLET">Ví tiền</option>
+          </select>
+        </div>
+        <div style="grid-column:1/-1"><label>Địa chỉ</label><input name="address" required></div>
+        <div class="muted" id="guide" style="grid-column:1/-1">Chọn phương thức để xem hướng dẫn.</div>
+        <textarea name="note" rows="3" placeholder="Ghi chú giao hàng..." style="grid-column:1/-1"></textarea>
+        <button class="btn" type="submit" style="grid-column:1/-1">Xác nhận</button>
+        <div id="ok" class="alert success" style="grid-column:1/-1; display:none">Đặt hàng thành công!</div>
+        <div id="err" class="alert error" style="grid-column:1/-1; display:none">Có lỗi, vui lòng thử lại.</div>
+      </form>
+    </div>
+  </div></div>
+</section>
+
+<script type="module" src="assets/firebase-config.js"></script>
+<script type="module" src="assets/app-config.js"></script>
+<script type="module" src="assets/checkout.js"></script>
+</body>
+</html>
