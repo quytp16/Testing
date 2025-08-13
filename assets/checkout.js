@@ -1,22 +1,34 @@
-// assets/checkout.js — tailored to checkout.html (acctBox, payForm, VietQR), safe DOM access
+// assets/checkout.js — ultra-safe DOM + autofill + email + invoice
 import { auth, db } from './firebase-config.js';
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
 import { doc, getDoc, addDoc, collection, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 import { BANK } from './app-config.js';
 
-// ===== Config =====
 const FORMSPREE_ENDPOINT = 'https://formspree.io/f/meozvdoo';
-const BCC_EMAILS = []; // optional BCC array
+const BCC_EMAILS = [];
 
 // ===== Utils =====
 const $ = (s)=>document.querySelector(s);
 const moneyVN = n => (Number(n)||0).toLocaleString('vi-VN') + '₫';
-const setText = (sel, text) => { const el = $(sel); if (el) el.textContent = text; };
-const setVal  = (sel, text) => { const el = $(sel); if (el && 'value' in el) el.value = text; };
 
-function loadCart(){
-  try { return JSON.parse(localStorage.getItem('cart')||'[]'); } catch { return []; }
+function whenDomReady() {
+  return new Promise((res)=>{
+    if (document.readyState === 'complete' || document.readyState === 'interactive') return res();
+    document.addEventListener('DOMContentLoaded', res, { once: true });
+  });
 }
+function setTextAny(selectors, text) {
+  for (const sel of selectors) {
+    const el = document.querySelector(sel);
+    if (el) { el.textContent = text; return true; }
+  }
+  return false;
+}
+function setValSafely(sel, val) {
+  const el = document.querySelector(sel);
+  if (el && 'value' in el && !el.value) el.value = val;
+}
+function loadCart(){ try { return JSON.parse(localStorage.getItem('cart')||'[]'); } catch { return []; } }
 
 function renderCartSummary() {
   const list = $('#summary');
@@ -41,7 +53,6 @@ function renderCartSummary() {
   return { cart, total };
 }
 
-// ===== VietQR helper =====
 function vietqrUrl({amount, addInfo}){
   const { bankCode, accountNumber, accountName, template='compact' } = BANK || {};
   const base = `https://img.vietqr.io/image/${bankCode}-${accountNumber}-${template}.png`;
@@ -52,30 +63,33 @@ function vietqrUrl({amount, addInfo}){
   return `${base}?${params.toString()}`;
 }
 
-// ===== Auto-fill account box + form when logged in =====
+// ===== Auth: autofill + account box =====
 onAuthStateChanged(auth, async (user) => {
   if (!user) return;
   try{
+    await whenDomReady();
     const snap = await getDoc(doc(db, 'users', user.uid));
     const d = snap.exists() ? (snap.data()||{}) : {};
-    // Show account box
-    const acctBox = $('#acctBox'); if (acctBox) acctBox.style.display = 'block';
-    setText('#meEmail', user.email || d.email || '—');
-    setText('#meName', d.name || '—');
-    setText('#meBalance', moneyVN(Number(d.balance || 0)));
+
+    // Account box (try multiple IDs)
+    const acctBox = $('#acctBox') || $('#wallet');
+    if (acctBox) acctBox.style.display = 'block';
+    setTextAny(['#meEmail', '#accountEmail'], user.email || d.email || '—');
+    setTextAny(['#meName', '#accountName'], d.name || '—');
+    setTextAny(['#meBalance', '#walletBalance', '#balance'], moneyVN(Number(d.balance || 0)));
+
     // Autofill form
-    setVal('input[name="name"]', d.name || '');
-    setVal('input[name="phone"]', d.phone || '');
-    setVal('input[name="email"]', user.email || d.email || '');
-    setVal('input[name="address"]', d.address || '');
+    setValSafely('input[name="name"]', d.name || '');
+    setValSafely('input[name="phone"]', d.phone || '');
+    setValSafely('input[name="email"]', user.email || d.email || '');
+    setValSafely('input[name="address"]', d.address || '');
   }catch(e){ console.warn('Autofill failed:', e); }
 });
 
-// ===== Email formatting (text for Formspree free) =====
+// ===== Email (text) =====
 function buildEmailText({ id, method, total, items, customer }){
   const productsLine = (items||[]).map(i => `${i.name} x${Number(i.qty||1)}`).join(', ') || '(trống)';
-  return (
-`ĐƠN HÀNG #${id||'N/A'}
+  return `ĐƠN HÀNG #${id||'N/A'}
 Phương thức: ${method}
 Tổng: ${moneyVN(total)}
 
@@ -86,17 +100,13 @@ Khách hàng:
 - Địa chỉ: ${customer.address||'-'}
 
 Sản phẩm:
-${productsLine}`
-  );
+${productsLine}`;
 }
-
-// ===== Send mail to seller via Formspree =====
 async function sendOrderEmail({ id, method, total, items, customer }) {
   if (!FORMSPREE_ENDPOINT) return;
   try {
     const subject = `Đơn hàng mới – ${customer?.email || 'khách'} – ${method}`;
     const text = buildEmailText({ id, method, total, items, customer });
-
     const body = new FormData();
     body.append('subject', subject);
     body.append('message', text);
@@ -110,15 +120,11 @@ async function sendOrderEmail({ id, method, total, items, customer }) {
     body.append('products', (items||[]).map(i => `${i.name} x${Number(i.qty||1)}`).join(', ') || '(trống)');
     if (customer?.email) { body.append('email', customer.email); body.append('_replyto', customer.email); }
     if (Array.isArray(BCC_EMAILS)) BCC_EMAILS.forEach(e => e && body.append('_bcc', e));
-
-    const resp = await fetch(FORMSPREE_ENDPOINT, { method: 'POST', body, headers: { 'Accept':'application/json' } });
-    if (!resp.ok) console.warn('Formspree not OK:', resp.status, await resp.text().catch(()=>''));
-  } catch (e) {
-    console.warn('Send mail failed:', e);
-  }
+    await fetch(FORMSPREE_ENDPOINT, { method: 'POST', body, headers: { 'Accept':'application/json' } });
+  } catch (e) { console.warn('Send mail failed:', e); }
 }
 
-// ===== Open invoice print window (Save as PDF) =====
+// ===== Invoice (print / Save as PDF) =====
 function openInvoicePDF({ id, method, total, items, customer }){
   const rows = (items||[]).map(i => `
     <tr>
@@ -126,47 +132,29 @@ function openInvoicePDF({ id, method, total, items, customer }){
       <td style="padding:6px;border:1px solid #e5e7eb;text-align:center">${Number(i.qty||1)}</td>
       <td style="padding:6px;border:1px solid #e5e7eb;text-align:right">${moneyVN(Number(i.price||0))}</td>
     </tr>`).join('');
-
-  const html = `<!doctype html>
-<html><head><meta charset="utf-8"><title>Hóa đơn #${id||'N/A'}</title>
-<style>
-  body{font-family:Inter,Arial,sans-serif;color:#111}
-  .wrap{max-width:720px;margin:24px auto;padding:16px}
-  table{border-collapse:collapse;width:100%}
-  th,td{border:1px solid #e5e7eb;padding:6px}
-  th{background:#f8fafc}
-  .tot{font-weight:700}
-  @media print {.no-print{display:none}}
-</style></head>
-<body><div class="wrap">
-  <h2>Hóa đơn bán hàng</h2>
-  <div>Mã đơn: <b>#${id||'N/A'}</b></div>
-  <div>Phương thức: ${method}</div>
-  <div class="tot" style="margin:6px 0">Tổng: ${moneyVN(total)}</div>
-
-  <h3>Khách hàng</h3>
-  <div><b>${customer?.name||'-'}</b></div>
-  <div>${customer?.email||'-'} — ${customer?.phone||'-'}</div>
-  <div>${customer?.address||'-'}</div>
-
-  <h3>Sản phẩm</h3>
-  <table><thead><tr><th>Tên</th><th>SL</th><th>Giá</th></tr></thead><tbody>${rows}</tbody></table>
-
-  <div class="no-print" style="margin-top:12px"><button onclick="window.print()">In / Lưu PDF</button></div>
-</div>
-<script>setTimeout(function(){try{window.print()}catch(e){}},300)</script>
-</body></html>`;
-
-  const w = window.open('', '_blank');
-  if (!w) return;
+  const html = `<!doctype html><html><head><meta charset="utf-8"><title>Hóa đơn #${id||'N/A'}</title>
+  <style>body{font-family:Inter,Arial,sans-serif;color:#111}.wrap{max-width:720px;margin:24px auto;padding:16px}table{border-collapse:collapse;width:100%}th,td{border:1px solid #e5e7eb;padding:6px}th{background:#f8fafc}.tot{font-weight:700}@media print{.no-print{display:none}}</style>
+  </head><body><div class="wrap">
+    <h2>Hóa đơn bán hàng</h2>
+    <div>Mã đơn: <b>#${id||'N/A'}</b></div>
+    <div>Phương thức: ${method}</div>
+    <div class="tot" style="margin:6px 0">Tổng: ${moneyVN(total)}</div>
+    <h3>Khách hàng</h3>
+    <div><b>${customer?.name||'-'}</b></div>
+    <div>${customer?.email||'-'} — ${customer?.phone||'-'}</div>
+    <div>${customer?.address||'-'}</div>
+    <h3>Sản phẩm</h3>
+    <table><thead><tr><th>Tên</th><th>SL</th><th>Giá</th></tr></thead><tbody>${rows}</tbody></table>
+    <div class="no-print" style="margin-top:12px"><button onclick="window.print()">In / Lưu PDF</button></div>
+  </div><script>setTimeout(function(){try{window.print()}catch(e){}},300)</script></body></html>`;
+  const w = window.open('', '_blank'); if (!w) return;
   w.document.open(); w.document.write(html); w.document.close();
 }
 
 // ===== Page wiring =====
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', ()=>{
   const { cart, total } = renderCartSummary();
-
-  const form = $('#payForm');
+  const form = $('#payForm') || $('#formCheckout');
   const paymentSel = $('#payment');
   const qrBox = $('#qrBox');
   const qrImg = $('#vietqrImg');
@@ -213,11 +201,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     try{
       const odRef = await addDoc(collection(db,'orders'), {
-        items: cart,
-        total,
-        customer,
-        address: customer.address,
-        userEmail: customer.email || null,
+        items: cart, total, customer,
         paymentMethod: method,
         status: method==='BANK' ? 'awaiting_bank' : (method==='WALLET' ? 'pending_wallet' : 'pending'),
         createdAt: serverTimestamp()
@@ -227,13 +211,9 @@ document.addEventListener('DOMContentLoaded', () => {
       ok && (ok.textContent = (method==='BANK' ? 'Đã tạo đơn. Vui lòng quét mã để thanh toán!' : 'Đặt hàng thành công!'));
       ok && (ok.style.display='block');
 
-      // Send email
       await sendOrderEmail({ id: orderId, method, total, items: cart, customer });
-
-      // Open invoice window (Save as PDF)
       openInvoicePDF({ id: orderId, method, total, items: cart, customer });
 
-      // Done
       localStorage.removeItem('cart');
     }catch(ex){
       console.error(ex);
