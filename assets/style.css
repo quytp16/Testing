@@ -21,7 +21,7 @@ img{max-width:100%;display:block}
 .header__cta{display:flex;gap:10px;align-items:center}
 
 /* Hero */
-.hero{background:linear-gradient(180deg,#06121e,#0f172a);color:#e2e8f0;padding:40px 0}
+.hero{background:linear-gradient(180deg,#06121e,#0f172a);color:#e2e8f0;padding:40px 0;min-height:auto}
 .hero__inner{display:grid;grid-template-columns:1.1fr .9fr;gap:20px;align-items:center}
 .hero__copy h1{margin:0 0 10px;color:#fff;font-size:36px}
 .highlight{color:#67e8f9}
@@ -120,6 +120,12 @@ html, body { height: 100%; }
 body {
   min-height: 100vh;                 /* tiêu chuẩn */
   min-height: -webkit-fill-available;/* iOS fallback */
+}
+
+/* Ưu tiên đơn vị viewport hiện đại (Safari 15+):
+   Dùng cho hero, banner cao toàn màn hình nếu có */
+.fullvh {
+  min-height: 100svh;                 /* small viewport height */
 }
 
 /* Safe-area cho máy có tai thỏ (Dynamic Island/notch) */
