@@ -1,11 +1,12 @@
-// assets/checkout.js — SAFE DOM (no null errors) + autofill + email + invoice PDF
+// assets/checkout.js — tailored to checkout.html (acctBox, payForm, VietQR), safe DOM access
 import { auth, db } from './firebase-config.js';
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
 import { doc, getDoc, addDoc, collection, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+import { BANK } from './app-config.js';
 
 // ===== Config =====
 const FORMSPREE_ENDPOINT = 'https://formspree.io/f/meozvdoo';
-const BCC_EMAILS = []; // optional BCC
+const BCC_EMAILS = []; // optional BCC array
 
 // ===== Utils =====
 const $ = (s)=>document.querySelector(s);
@@ -17,147 +18,226 @@ function loadCart(){
   try { return JSON.parse(localStorage.getItem('cart')||'[]'); } catch { return []; }
 }
 
-// ===== Auto-fill from profile if logged-in =====
+function renderCartSummary() {
+  const list = $('#summary');
+  const totalEl = $('#sumTotal');
+  const cart = loadCart();
+  let total = 0;
+  if (list) list.innerHTML = '';
+  if (!cart.length) {
+    if (list) list.innerHTML = '<div class="muted">Giỏ hàng trống. <a href="index.html">Quay lại mua hàng</a>.</div>';
+  } else {
+    cart.forEach(i => {
+      const row = document.createElement('div');
+      row.style.display = 'flex';
+      row.style.justifyContent = 'space-between';
+      const qty = Number(i.qty||1), price = Number(i.price||0);
+      row.innerHTML = `<div>${i.name} <span class="muted">x${qty}</span></div><div><strong>${moneyVN(qty*price)}</strong></div>`;
+      list && list.appendChild(row);
+      total += qty*price;
+    });
+  }
+  if (totalEl) totalEl.textContent = moneyVN(total);
+  return { cart, total };
+}
+
+// ===== VietQR helper =====
+function vietqrUrl({amount, addInfo}){
+  const { bankCode, accountNumber, accountName, template='compact' } = BANK || {};
+  const base = `https://img.vietqr.io/image/${bankCode}-${accountNumber}-${template}.png`;
+  const params = new URLSearchParams();
+  if (amount) params.append('amount', Math.round(amount));
+  if (addInfo) params.append('addInfo', addInfo);
+  if (accountName) params.append('accountName', accountName);
+  return `${base}?${params.toString()}`;
+}
+
+// ===== Auto-fill account box + form when logged in =====
 onAuthStateChanged(auth, async (user) => {
   if (!user) return;
   try{
     const snap = await getDoc(doc(db, 'users', user.uid));
     const d = snap.exists() ? (snap.data()||{}) : {};
-    // Fill account box (if present on checkout page)
+    // Show account box
+    const acctBox = $('#acctBox'); if (acctBox) acctBox.style.display = 'block';
     setText('#meEmail', user.email || d.email || '—');
     setText('#meName', d.name || '—');
     setText('#meBalance', moneyVN(Number(d.balance || 0)));
-    const walletBox = $('#wallet'); if (walletBox) walletBox.style.display = 'block';
-    // Fill form fields (only if inputs exist)
+    // Autofill form
     setVal('input[name="name"]', d.name || '');
     setVal('input[name="phone"]', d.phone || '');
-    setVal('input[name="address"]', d.address || '');
     setVal('input[name="email"]', user.email || d.email || '');
+    setVal('input[name="address"]', d.address || '');
   }catch(e){ console.warn('Autofill failed:', e); }
 });
 
-// ===== Email content (HTML for invoice window) =====
-function buildEmailHTML({ id, method, total, items, customer }) {
-  const lines = (items || []).map(i =>
-    `<tr>
-       <td style="padding:6px;border:1px solid #e5e7eb">${i.name}</td>
-       <td style="padding:6px;border:1px solid #e5e7eb;text-align:center">${Number(i.qty||1)}</td>
-       <td style="padding:6px;border:1px solid #e5e7eb;text-align:right">${moneyVN(Number(i.price||0))}</td>
-     </tr>`
-  ).join('');
-  return `
-    <div style="font-family:Inter,Arial,sans-serif;font-size:14px;line-height:1.5;color:#111">
-      <h2 style="margin:0 0 8px">🛒 Đơn hàng #${id||'N/A'}</h2>
-      <p style="margin:0 0 8px"><b>Phương thức:</b> ${method} &nbsp; • &nbsp; <b>Tổng:</b> ${moneyVN(total)}</p>
-      <h3 style="margin:12px 0 6px">Khách hàng</h3>
-      <table style="border-collapse:collapse">
-        <tr><td style="padding:4px 8px;color:#555">Họ tên</td><td style="padding:4px 8px"><b>${customer.name||'-'}</b></td></tr>
-        <tr><td style="padding:4px 8px;color:#555">Email</td><td style="padding:4px 8px">${customer.email||'-'}</td></tr>
-        <tr><td style="padding:4px 8px;color:#555">SĐT</td><td style="padding:4px 8px">${customer.phone||'-'}</td></tr>
-        <tr><td style="padding:4px 8px;color:#555">Địa chỉ</td><td style="padding:4px 8px">${customer.address||'-'}</td></tr>
-      </table>
-      <h3 style="margin:12px 0 6px">Sản phẩm</h3>
-      <table style="border-collapse:collapse;width:100%">
-        <thead>
-          <tr>
-            <th style="padding:6px;border:1px solid #e5e7eb;background:#f8fafc;text-align:left">Tên</th>
-            <th style="padding:6px;border:1px solid #e5e7eb;background:#f8fafc;text-align:center">SL</th>
-            <th style="padding:6px;border:1px solid #e5e7eb;background:#f8fafc;text-align:right">Giá</th>
-          </tr>
-        </thead>
-        <tbody>${lines||''}</tbody>
-      </table>
-      <p style="margin-top:10px"><b>Tổng cộng:</b> ${moneyVN(total)}</p>
-    </div>
-  `;
-}
-
-// ===== Send email to seller (Formspree) =====
-async function sendOrderEmail({ id, method, total, items, customer }) {
-  if (!FORMSPREE_ENDPOINT) return;
-  try {
-    const subject = `Đơn hàng mới – ${customer?.email || 'khách'} – ${method}`;
-    const products = (items||[]).map(i => `${i.name} x${Number(i.qty||1)}`).join(', ') || '(trống)';
-    const text =
-`ĐƠN HÀNG #${id || 'N/A'}
+// ===== Email formatting (text for Formspree free) =====
+function buildEmailText({ id, method, total, items, customer }){
+  const productsLine = (items||[]).map(i => `${i.name} x${Number(i.qty||1)}`).join(', ') || '(trống)';
+  return (
+`ĐƠN HÀNG #${id||'N/A'}
 Phương thức: ${method}
 Tổng: ${moneyVN(total)}
 
 Khách hàng:
-- Họ tên: ${customer.name || '-'}
-- Email: ${customer.email || '-'}
-- SĐT: ${customer.phone || '-'}
-- Địa chỉ: ${customer.address || '-'}
+- Họ tên: ${customer.name||'-'}
+- Email: ${customer.email||'-'}
+- SĐT: ${customer.phone||'-'}
+- Địa chỉ: ${customer.address||'-'}
 
 Sản phẩm:
-${products}`;
+${productsLine}`
+  );
+}
 
-    const html = buildEmailHTML({ id, method, total, items, customer });
+// ===== Send mail to seller via Formspree =====
+async function sendOrderEmail({ id, method, total, items, customer }) {
+  if (!FORMSPREE_ENDPOINT) return;
+  try {
+    const subject = `Đơn hàng mới – ${customer?.email || 'khách'} – ${method}`;
+    const text = buildEmailText({ id, method, total, items, customer });
 
     const body = new FormData();
     body.append('subject', subject);
-    // Gửi text (chắc chắn hiển thị ở free); đính kèm HTML để tham khảo
     body.append('message', text);
-    body.append('html_preview', html);
     body.append('order_id', id || 'N/A');
-    body.append('products', products);
-    body.append('total', String(total || 0));
     body.append('payment_method', method || '');
+    body.append('total', String(total || 0));
     body.append('customer_name', customer?.name || '');
     body.append('customer_email', customer?.email || '');
     body.append('customer_phone', customer?.phone || '');
     body.append('customer_address', customer?.address || '');
-    if (customer?.email) {
-      body.append('email', customer.email);
-      body.append('_replyto', customer.email);
-    }
+    body.append('products', (items||[]).map(i => `${i.name} x${Number(i.qty||1)}`).join(', ') || '(trống)');
+    if (customer?.email) { body.append('email', customer.email); body.append('_replyto', customer.email); }
     if (Array.isArray(BCC_EMAILS)) BCC_EMAILS.forEach(e => e && body.append('_bcc', e));
 
-    await fetch(FORMSPREE_ENDPOINT, { method: 'POST', body, headers: { 'Accept': 'application/json' } });
+    const resp = await fetch(FORMSPREE_ENDPOINT, { method: 'POST', body, headers: { 'Accept':'application/json' } });
+    if (!resp.ok) console.warn('Formspree not OK:', resp.status, await resp.text().catch(()=>''));
   } catch (e) {
     console.warn('Send mail failed:', e);
   }
 }
 
-// ===== Open invoice window (user can Save as PDF) =====
-function openInvoicePDF({ id, method, total, items, customer }) {
+// ===== Open invoice print window (Save as PDF) =====
+function openInvoicePDF({ id, method, total, items, customer }){
+  const rows = (items||[]).map(i => `
+    <tr>
+      <td style="padding:6px;border:1px solid #e5e7eb">${i.name}</td>
+      <td style="padding:6px;border:1px solid #e5e7eb;text-align:center">${Number(i.qty||1)}</td>
+      <td style="padding:6px;border:1px solid #e5e7eb;text-align:right">${moneyVN(Number(i.price||0))}</td>
+    </tr>`).join('');
+
+  const html = `<!doctype html>
+<html><head><meta charset="utf-8"><title>Hóa đơn #${id||'N/A'}</title>
+<style>
+  body{font-family:Inter,Arial,sans-serif;color:#111}
+  .wrap{max-width:720px;margin:24px auto;padding:16px}
+  table{border-collapse:collapse;width:100%}
+  th,td{border:1px solid #e5e7eb;padding:6px}
+  th{background:#f8fafc}
+  .tot{font-weight:700}
+  @media print {.no-print{display:none}}
+</style></head>
+<body><div class="wrap">
+  <h2>Hóa đơn bán hàng</h2>
+  <div>Mã đơn: <b>#${id||'N/A'}</b></div>
+  <div>Phương thức: ${method}</div>
+  <div class="tot" style="margin:6px 0">Tổng: ${moneyVN(total)}</div>
+
+  <h3>Khách hàng</h3>
+  <div><b>${customer?.name||'-'}</b></div>
+  <div>${customer?.email||'-'} — ${customer?.phone||'-'}</div>
+  <div>${customer?.address||'-'}</div>
+
+  <h3>Sản phẩm</h3>
+  <table><thead><tr><th>Tên</th><th>SL</th><th>Giá</th></tr></thead><tbody>${rows}</tbody></table>
+
+  <div class="no-print" style="margin-top:12px"><button onclick="window.print()">In / Lưu PDF</button></div>
+</div>
+<script>setTimeout(function(){try{window.print()}catch(e){}},300)</script>
+</body></html>`;
+
   const w = window.open('', '_blank');
   if (!w) return;
-  const html = `<!doctype html><html><head><meta charset="utf-8"><title>Hóa đơn #${id||'N/A'}</title></head><body>${buildEmailHTML({id,method,total,items,customer})}<script>setTimeout(()=>{try{window.print()}catch(e){}},300);</script></body></html>`;
   w.document.open(); w.document.write(html); w.document.close();
 }
 
-// ===== Submit handler =====
-const formCheckout = $('#formCheckout') || $('#payForm');
-if (formCheckout) {
-  formCheckout.addEventListener('submit', async (e) => {
+// ===== Page wiring =====
+document.addEventListener('DOMContentLoaded', () => {
+  const { cart, total } = renderCartSummary();
+
+  const form = $('#payForm');
+  const paymentSel = $('#payment');
+  const qrBox = $('#qrBox');
+  const qrImg = $('#vietqrImg');
+  const qrNote = $('#qrNote');
+  const guide = $('#guide');
+  const ok = $('#ok');
+  const err = $('#err');
+
+  function syncPaymentGuide(){
+    const v = paymentSel ? paymentSel.value : 'COD';
+    if (guide){
+      guide.textContent = v==='WALLET' ? 'Ví tiền: cần đăng nhập và đủ số dư. Đơn có thể chờ admin xác nhận.'
+                      : v==='BANK' ? 'Chuyển khoản VietQR theo mã hiển thị. Ghi đúng nội dung để đối soát.'
+                      : v==='MOMO' ? 'MoMo: sẽ gửi số sau khi xác nhận.'
+                      : 'COD: thanh toán khi nhận hàng.';
+    }
+    if (qrBox) qrBox.style.display = (v==='BANK') ? 'block' : 'none';
+    if (v==='BANK' && qrImg && qrNote){
+      const fd = form ? new FormData(form) : new FormData();
+      const add = ((fd.get('name')||'') + (fd.get('phone')?` ${fd.get('phone')}`:'')) || 'Thanh toan don hang';
+      qrImg.src = vietqrUrl({ amount: total, addInfo: add });
+      qrNote.textContent = `Chủ TK: ${BANK?.accountName||''} — Ghi chú: ${add}`;
+    }
+  }
+  paymentSel?.addEventListener('change', syncPaymentGuide);
+  form?.addEventListener('input', ()=>{ if (paymentSel?.value==='BANK') syncPaymentGuide(); });
+  syncPaymentGuide();
+
+  form?.addEventListener('submit', async (e)=>{
     e.preventDefault();
-    const data = new FormData(formCheckout);
+    ok && (ok.style.display='none');
+    err && (err.style.display='none');
+
+    const fd = new FormData(form);
     const customer = {
-      name: (data.get('name')||'').toString(),
-      phone: (data.get('phone')||'').toString(),
-      address: (data.get('address')||'').toString(),
-      email: (data.get('email')||'').toString(),
+      name: (fd.get('name')||'').toString().trim(),
+      phone: (fd.get('phone')||'').toString().trim(),
+      email: (fd.get('email')||'').toString().trim(),
+      address: (fd.get('address')||'').toString().trim(),
     };
-    const method = (data.get('payment_method')||'COD').toString();
+    const method = (fd.get('payment_method')||'COD').toString();
 
-    const items = loadCart();
-    const total = items.reduce((s, i) => s + Number(i.price||0)*Number(i.qty||1), 0);
+    if (!cart.length){ if (err){err.textContent='Giỏ hàng trống';err.style.display='block';} return; }
 
-    // Lưu Firestore
-    const ref = await addDoc(collection(db, 'orders'), {
-      customer, items, total, paymentMethod: method, status: 'pending', createdAt: serverTimestamp()
-    });
-    const orderId = ref.id;
+    try{
+      const odRef = await addDoc(collection(db,'orders'), {
+        items: cart,
+        total,
+        customer,
+        address: customer.address,
+        userEmail: customer.email || null,
+        paymentMethod: method,
+        status: method==='BANK' ? 'awaiting_bank' : (method==='WALLET' ? 'pending_wallet' : 'pending'),
+        createdAt: serverTimestamp()
+      });
+      const orderId = odRef.id;
 
-    // Gửi email cho người bán
-    await sendOrderEmail({ id: orderId, method, total, items, customer });
+      ok && (ok.textContent = (method==='BANK' ? 'Đã tạo đơn. Vui lòng quét mã để thanh toán!' : 'Đặt hàng thành công!'));
+      ok && (ok.style.display='block');
 
-    // Mở hóa đơn để In/Lưu PDF
-    openInvoicePDF({ id: orderId, method, total, items, customer });
+      // Send email
+      await sendOrderEmail({ id: orderId, method, total, items: cart, customer });
 
-    // Clear cart + thông báo
-    localStorage.removeItem('cart');
-    alert('Đặt hàng thành công!');
+      // Open invoice window (Save as PDF)
+      openInvoicePDF({ id: orderId, method, total, items: cart, customer });
+
+      // Done
+      localStorage.removeItem('cart');
+    }catch(ex){
+      console.error(ex);
+      if (err){ err.textContent = 'Có lỗi, vui lòng thử lại.'; err.style.display='block'; }
+    }
   });
-}
+});
