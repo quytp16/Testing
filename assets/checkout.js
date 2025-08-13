@@ -72,44 +72,59 @@ onAuthStateChanged(auth, async (u)=>{
 const FORMSPREE_ENDPOINT = "https://formspree.io/f/meozvdoo";
 const moneyVN = n => (n||0).toLocaleString('vi-VN') + '₫';
 
-function buildEmailText(args) {
-  const { id, method, total, items, customer } = args;
-  const lines = (items||[]).map(i => `• ${i.name} x${i.qty} — ${moneyVN(i.price||0)}`).join('');
-  return (
-`Đơn #${id||'N/A'}
-Phương thức: ${method}  |  Tổng: ${moneyVN(total)}
+function buildEmailBoxText({ id, method, total, items, customer }) {
+  const L = (s='') => s; // helper
+  const lines = (items || []).map(i => `  - ${i.name || 'SP'} x${Number(i.qty||1)} – ${moneyVN(Number(i.price||0))}`).join('\n') || '  (trống)';
 
-Khách hàng
-- Họ tên: ${customer.name||'-'}
-- Điện thoại: ${customer.phone||'-'}
-- Email: ${customer.email||'-'}
-- Địa chỉ: ${customer.address||'-'}
+  const body =
+`ĐƠN HÀNG #${id || 'N/A'}
+Phương thức: ${method}
+Tổng: ${moneyVN(total)}
 
-Sản phẩm
-${lines||'(trống)'}`
-  );
+Khách hàng:
+  - Họ tên: ${customer.name || '-'}
+  - Email: ${customer.email || '-'}
+  - SĐT: ${customer.phone || '-'}
+  - Địa chỉ: ${customer.address || '-'}
+
+Sản phẩm:
+${lines}`;
+
+  // bọc “khung” bằng unicode box-drawing
+  const box = body.split('\n');
+  const width = Math.max(...box.map(l => l.length));
+  const top = '┌' + '─'.repeat(width + 2) + '┐';
+  const bottom = '└' + '─'.repeat(width + 2) + '┘';
+  const middle = box.map(l => '│ ' + l.padEnd(width, ' ') + ' │').join('\n');
+  return `${top}\n${middle}\n${bottom}`;
 }
 
 async function sendOrderEmail({ id, method, total, items, customer }) {
   if (!FORMSPREE_ENDPOINT) return;
   try {
-    const subject = `🛒 Đơn hàng mới #${id||'N/A'} – ${method}`;
-    const text = buildEmailText({ id, method, total, items, customer });
+    const subject = `Đơn hàng mới – ${customer?.email || 'khách'} – ${method}`;
+    const text = buildEmailBoxText({ id, method, total, items, customer });
 
     const body = new FormData();
     body.append('subject', subject);
-    // Many Formspree setups accept HTML in 'message'. We also include a hint:
-    body.append('message', html);
-    body.append('_format', 'html');
-    // Fallback text (some setups display both; harmless):
-    body.append('alt_text', text);
+    body.append('message', text);                 // GỬI TEXT
+    body.append('order_id', id || 'N/A');
+    body.append('products', (items||[]).map(i => `${i.name||'SP'} x${Number(i.qty||1)}`).join(', ') || '(trống)');
+    body.append('total', String(total || 0));
+    body.append('payment_method', method || '');
+    body.append('customer_name', customer?.name || '');
+    body.append('customer_email', customer?.email || '');
+    body.append('customer_phone', customer?.phone || '');
+    body.append('customer_address', customer?.address || '');
 
-    if (customer.email) body.append('_cc', customer.email);
-    if (Array.isArray(BCC_EMAILS)) {
-      BCC_EMAILS.forEach(e => e && body.append('_bcc', e));
+    // giúp trả lời trực tiếp người mua
+    if (customer?.email) {
+      body.append('email', customer.email);
+      body.append('_replyto', customer.email);
     }
+    if (Array.isArray(BCC_EMAILS)) BCC_EMAILS.forEach(e => e && body.append('_bcc', e));
 
-    await fetch(FORMSPREE_ENDPOINT, { method: 'POST', body });
+    await fetch(FORMSPREE_ENDPOINT, { method: 'POST', body, headers: { 'Accept': 'application/json' } });
   } catch (e) {
     console.warn('Send mail failed:', e);
   }
