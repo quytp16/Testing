@@ -19,23 +19,10 @@ function addToCart(item){
 }
 
 function cardHTML(p){
-  const showStrike = (typeof p.original_price === 'number') && (p.original_price > (p.price||0));
   return `
   <div class="product">
     <div class="product__media">
       <img src="${p.image || 'img/logo.jpg'}" alt="${p.name || ''}"/>
-    </div>
-    <div class="product__body">
-      <h3 class="product__title">${p.name || ''}</h3>
-      <div class="product__price">
-        <span class="price">${money(p.price||0)}</span>
-        ${showStrike ? `<span class="price--strike">${money(p.original_price)}</span>` : ''}
-      </div>
-      <button class="btn buy-now" data-id="${p.id}">Mua ngay</button>
-    </div>
-  </div>`;
-}
-" alt="${p.name || ''}"/>
     </div>
     <div class="product__body">
       <h3 class="product__title">${p.name || ''}</h3>
@@ -86,7 +73,8 @@ export async function renderProducts({ container = '#products .products' } = {})
   el.innerHTML = '<div class="muted">Đang tải...</div>';
   const col = collection(db, 'products');
   const qMain = query(col, orderBy('createdAt','desc'), limit(24));
-  const snap = await _safeGetDocs(qMain);
+  const qFallback = query(col, limit(24));
+  const snap = await _safeGetDocs(qMain, qFallback);
   const items = [];
   snap.forEach(d => items.push({ id: d.id, ...d.data() }));
   if (!items.length){ el.innerHTML = '<div class="muted">Chưa có sản phẩm.</div>'; return; }
