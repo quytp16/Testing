@@ -122,12 +122,6 @@ body {
   min-height: -webkit-fill-available;/* iOS fallback */
 }
 
-/* Ưu tiên đơn vị viewport hiện đại (Safari 15+):
-   Dùng cho hero, banner cao toàn màn hình nếu có */
-.hero, .fullvh {
-  min-height: 100svh;                 /* small viewport height */
-}
-
 /* Safe-area cho máy có tai thỏ (Dynamic Island/notch) */
 :root {
   --safe-top: env(safe-area-inset-top);
