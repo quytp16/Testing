@@ -1,4 +1,4 @@
-// admin.js (enhanced with wallet deduction)
+// admin.js — add Deposit/Withdraw to Users tab + wallet-deduct in Orders
 import { db } from "./firebase-config.js";
 import {
   collection, updateDoc, deleteDoc, doc, getDoc, getDocs,
@@ -62,21 +62,77 @@ function mountUsers(){
         <td>${x.name||'—'}</td>
         <td>${x.role||'user'}</td>
         <td>${moneyVN(x.balance||0)}</td>
-        <td>
+        <td class="flex gap-2">
           <button class="btn btn--sm" data-role-user="${d.id}">Set user</button>
           <button class="btn btn--sm" data-role-admin="${d.id}">Set admin</button>
+          <button class="btn btn--sm" data-deposit="${d.id}">Nạp</button>
+          <button class="btn btn--sm btn--danger" data-withdraw="${d.id}">Rút</button>
         </td>
       </tr>`);
     });
     setRowHTML(tbody, rows.join(''));
   });
 
+  // role change
   document.addEventListener('click', async (e)=>{
     const btnU = e.target.closest('[data-role-user]');
     const btnA = e.target.closest('[data-role-admin]');
     if (btnU || btnA){
       const id = (btnU||btnA).getAttribute(btnU ? 'data-role-user' : 'data-role-admin');
       await updateDoc(doc(db,'users', id), { role: btnA ? 'admin' : 'user', updatedAt: serverTimestamp() });
+    }
+  });
+
+  // deposit
+  document.addEventListener('click', async (e)=>{
+    const btn = e.target.closest('[data-deposit]');
+    if (!btn) return;
+    const id = btn.getAttribute('data-deposit');
+    let v = prompt('Nhập số tiền cần nạp (VND):', '100000');
+    if (v === null) return;
+    v = Number(String(v).replace(/[^\d.-]/g,''));
+    if (!Number.isFinite(v) || v <= 0){ alert('Số tiền không hợp lệ'); return; }
+    btn.disabled = true;
+    try {
+      await runTransaction(db, async (tx)=>{
+        const ref = doc(db, 'users', id);
+        const snap = await tx.get(ref);
+        if (!snap.exists()) throw new Error('Không tìm thấy user');
+        const cur = Number((snap.data()||{}).balance || 0);
+        tx.update(ref, { balance: cur + v, updatedAt: serverTimestamp() });
+      });
+      alert('Đã nạp tiền');
+    } catch(err){
+      alert('Lỗi nạp tiền: ' + (err?.message || err));
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  // withdraw
+  document.addEventListener('click', async (e)=>{
+    const btn = e.target.closest('[data-withdraw]');
+    if (!btn) return;
+    const id = btn.getAttribute('data-withdraw');
+    let v = prompt('Nhập số tiền cần rút (VND):', '50000');
+    if (v === null) return;
+    v = Number(String(v).replace(/[^\d.-]/g,''));
+    if (!Number.isFinite(v) || v <= 0){ alert('Số tiền không hợp lệ'); return; }
+    btn.disabled = true;
+    try {
+      await runTransaction(db, async (tx)=>{
+        const ref = doc(db, 'users', id);
+        const snap = await tx.get(ref);
+        if (!snap.exists()) throw new Error('Không tìm thấy user');
+        const cur = Number((snap.data()||{}).balance || 0);
+        if (cur < v) throw new Error('Số dư không đủ để rút');
+        tx.update(ref, { balance: cur - v, updatedAt: serverTimestamp() });
+      });
+      alert('Đã rút tiền');
+    } catch(err){
+      alert('Lỗi rút tiền: ' + (err?.message || err));
+    } finally {
+      btn.disabled = false;
     }
   });
 }

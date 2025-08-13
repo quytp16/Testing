@@ -1,5 +1,4 @@
-
-// app.js — tailored for current HTML/CSS (drawer__overlay inside #cartDrawer)
+// app.js — add remove button; keep qty inc/dec; badge/total stay in sync
 (function () {
   // ---- Element refs
   const $ = (s) => document.querySelector(s);
@@ -11,6 +10,7 @@
   const totalEl    = $('#drawerTotal');
   const countEl    = $('#cartCount');
   const toastEl    = $('#toast');
+
   // ---- Utils
   const fmt = (n) => new Intl.NumberFormat('vi-VN').format(Number(n) || 0) + '₫';
 
@@ -40,33 +40,42 @@
   }
 
   // ---- Render items
-function renderDrawer() {
-  if (!listEl) return;
-  const cart = loadCart();
-  if (!cart.length) {
-    listEl.innerHTML = '<div class="muted" style="padding:8px 0">Giỏ hàng trống.</div>';
-    totalEl.textContent = fmt(0);
+  function renderDrawer() {
+    if (!listEl) return;
+    const cart = loadCart();
+    if (!cart.length) {
+      listEl.innerHTML = '<div class="muted" style="padding:8px 0">Giỏ hàng trống.</div>';
+      if (totalEl) totalEl.textContent = fmt(0);
+      updateBadge(cart);
+      return;
+    }
+    let sum = 0;
+    listEl.innerHTML = cart.map((i, idx) => {
+      const price = Number(i.price || 0);
+      const qty = Number(i.qty || 1);
+      const line = price * qty;
+      sum += line;
+      const img = i.image ? `<img src="${i.image}" alt="" style="width:48px;height:48px;object-fit:cover;border-radius:8px">` : '';
+      return `
+        <div class="drawer__item" data-idx="${idx}" style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid #eee">
+          <div style="display:flex;align-items:center;gap:10px;min-width:0;flex:1">
+            ${img}
+            <div style="min-width:0;flex:1">
+              <div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${i.name || 'Sản phẩm'}</div>
+              <div class="muted small">${fmt(price)} × ${qty} = <strong>${fmt(line)}</strong></div>
+            </div>
+          </div>
+          <div class="qty" style="display:flex;gap:6px;align-items:center">
+            <button class="qty__btn" data-act="dec" aria-label="Giảm">−</button>
+            <input class="qty__input" type="number" min="1" value="${qty}" style="width:54px;text-align:center">
+            <button class="qty__btn" data-act="inc" aria-label="Tăng">+</button>
+          </div>
+          <button class="btn btn--icon" title="Xoá" aria-label="Xoá" data-act="remove" style="margin-left:6px">✕</button>
+        </div>`;
+    }).join('');
+    if (totalEl) totalEl.textContent = fmt(sum);
     updateBadge(cart);
-    return;
   }
-  let sum = 0;
-  listEl.innerHTML = cart.map((i, idx) => {
-    const price = Number(i.price || 0);
-    const qty = Number(i.qty || 1);
-    sum += price * qty;
-    return `
-      <div class="drawer__item" data-idx="${idx}" style="display:flex;justify-content:space-between;align-items:center;gap:10px">
-        <div style="font-weight:600">${i.name || 'Sản phẩm'}</div>
-        <div class="qty" style="display:flex;gap:6px;align-items:center">
-          <button class="qty__btn" data-act="dec">-</button>
-          <input class="qty__input" type="number" min="1" value="${qty}" style="width:54px;text-align:center">
-          <button class="qty__btn" data-act="inc">+</button>
-        </div>
-      </div>`;
-  }).join('');
-  totalEl.textContent = fmt(sum);
-  updateBadge(cart);
-}
 
   // ---- Event delegation for qty/remove
   listEl?.addEventListener('click', (e) => {
@@ -89,6 +98,7 @@ function renderDrawer() {
     saveCart(cart);
     renderDrawer();
   });
+
   listEl?.addEventListener('change', (e) => {
     const input = e.target.closest('.qty__input');
     if (!input) return;
@@ -96,7 +106,9 @@ function renderDrawer() {
     if (!row) return;
     const idx = Number(row.dataset.idx);
     const cart = loadCart();
-    cart[idx].qty = Math.max(1, Number(input.value || 1));
+    let v = Math.max(1, Number(input.value || 1));
+    if (!Number.isFinite(v)) v = 1;
+    cart[idx].qty = v;
     saveCart(cart);
     renderDrawer();
   });
