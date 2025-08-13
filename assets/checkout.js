@@ -1,107 +1,41 @@
-// checkout.js (merged: clean imports + Formspree HTML emails)
+// checkout.js (autofill profile when logged in)
 import { auth, db, functions } from './firebase-config.js';
 import { onAuthStateChanged, getAuth } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
-import { collection, addDoc, serverTimestamp, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+import { collection, addDoc, serverTimestamp, doc, getDoc, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 import { httpsCallable } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-functions.js";
 import { BANK } from './app-config.js';
 
-const money = n => (n||0).toLocaleString('vi-VN') + '₫';
 const $ = (s)=>document.querySelector(s);
+const money = n => (n||0).toLocaleString('vi-VN') + '₫';
 
-function loadCart(){ try { return JSON.parse(localStorage.getItem('cart')||'[]'); } catch { return []; } }
-
-function vietqrUrl({amount, addInfo}){
-  const { bankCode, accountNumber, accountName, template='compact' } = BANK;
-  const base = `https://img.vietqr.io/image/${bankCode}-${accountNumber}-${template}.png`;
-  const params = new URLSearchParams();
-  if (amount) params.append('amount', Math.round(amount));
-  if (addInfo) params.append('addInfo', addInfo);
-  if (accountName) params.append('accountName', accountName);
-  return `${base}?${params.toString()}`;
-}
-
-const state = { user:null, balance:0, orderId:null };
-
-// === Formspree email helper (HTML-preferred) ===
+// ===== Formspree (subject only) =====
 const FORMSPREE_ENDPOINT = "https://formspree.io/f/meozvdoo";
-const BCC_EMAILS = []; // e.g., ['boss@example.com','archive@example.com']
-
-const moneyVN = n => (n||0).toLocaleString('vi-VN') + '₫';
-
-function buildEmailHTML({ id, method, total, items, customer }) {
-  const lines = (items||[]).map(i =>
-    `<li><strong>${i.name}</strong> × ${i.qty} — ${moneyVN(i.price||0)}</li>`
-  ).join('');
-  return `
-    <div style="font-family:Inter,Arial,sans-serif;font-size:14px;line-height:1.5;color:#111">
-      <h2 style="margin:0 0 8px">🛒 Đơn hàng #${id||'N/A'}</h2>
-      <p style="margin:0 0 8px"><b>Phương thức:</b> ${method} &nbsp; • &nbsp; <b>Tổng:</b> ${moneyVN(total)}</p>
-      <hr style="border:none;border-top:1px solid #eee;margin:12px 0">
-      <h3 style="margin:0 0 6px">Khách hàng</h3>
-      <p style="margin:0 0 8px">
-        <b>Họ tên:</b> ${customer.name||'-'}<br>
-        <b>Điện thoại:</b> ${customer.phone||'-'}<br>
-        <b>Email:</b> ${customer.email||'-'}<br>
-        <b>Địa chỉ:</b> ${customer.address||'-'}
-      </p>
-      <h3 style="margin:12px 0 6px">Sản phẩm</h3>
-      <ul style="margin:0;padding-left:18px">${lines||'<li>(trống)</li>'}</ul>
-    </div>
-  `;
-}
-
-function buildEmailText(args) {
-  const { id, method, total, items, customer } = args;
-  const lines = (items||[]).map(i => `• ${i.name} x${i.qty} — ${moneyVN(i.price||0)}`).join('\n');
-  return (
-`Đơn #${id||'N/A'}
-Phương thức: ${method}  |  Tổng: ${moneyVN(total)}
-
-Khách hàng
-- Họ tên: ${customer.name||'-'}
-- Điện thoại: ${customer.phone||'-'}
-- Email: ${customer.email||'-'}
-- Địa chỉ: ${customer.address||'-'}
-
-Sản phẩm
-${lines||'(trống)'}`
-  );
-}
+const BCC_EMAILS = []; // optional
 
 async function sendOrderEmail({ id, method, total, items, customer }) {
   if (!FORMSPREE_ENDPOINT) return;
   try {
     const subject = `Đơn hàng mới – ${customer?.email || 'khách'} – ${method}`;
-
     const body = new FormData();
     body.append('subject', subject);
-
-    // Nếu cần vẫn gửi kèm mã đơn, tổng tiền trong form data
+    // send minimal meta so you can see it in dashboard
     body.append('order_id', id || 'N/A');
-    body.append('total', total || 0);
+    body.append('total', String(total || 0));
     body.append('payment_method', method || '');
-    
     if (customer?.email) {
       body.append('email', customer.email);
       body.append('_replyto', customer.email);
-      body.append('_cc', customer.email);
+      body.append('_cc', customer.email); // may be ignored on free plan
     }
-    if (Array.isArray(BCC_EMAILS)) {
-      BCC_EMAILS.forEach(e => e && body.append('_bcc', e));
-    }
-
-    await fetch(FORMSPREE_ENDPOINT, {
-      method: 'POST',
-      body,
-      headers: { 'Accept': 'application/json' }
-    });
-  } catch (e) {
-    console.warn('Send mail failed:', e);
-  }
+    if (customer?.name) body.append('name', customer.name);
+    if (Array.isArray(BCC_EMAILS)) BCC_EMAILS.forEach(e => e && body.append('_bcc', e));
+    await fetch(FORMSPREE_ENDPOINT, { method: 'POST', body, headers: { 'Accept': 'application/json' } });
+  } catch (e) { console.warn('Send mail failed:', e); }
 }
 
+// ===== Cart helpers =====
+function loadCart(){ try { return JSON.parse(localStorage.getItem('cart')||'[]'); } catch { return []; } }
 
-// --- Cart & account rendering ---
 function renderCart(){
   const cart = loadCart();
   const sumDiv = $('#summary');
@@ -122,26 +56,89 @@ function renderCart(){
   return { cart, total };
 }
 
-async function loadUserWallet(u){
-  try{
-    const ref = doc(db, 'users', u.uid);
-    const snap = await getDoc(ref);
-    if (snap.exists()){
-      const data = snap.data();
-      state.balance = Number(data.balance || 0);
-      $('#meEmail').textContent = u.email || '—';
-      $('#meName').textContent = data.name || '—';
-      $('#meBalance').textContent = money(state.balance);
-      $('#acctBox').style.display = 'block';
-    }
-  }catch{ /* ignore */ }
+// ===== VietQR helper =====
+function vietqrUrl({amount, addInfo}){
+  const { bankCode, accountNumber, accountName, template='compact' } = BANK;
+  const base = `https://img.vietqr.io/image/${bankCode}-${accountNumber}-${template}.png`;
+  const params = new URLSearchParams();
+  if (amount) params.append('amount', Math.round(amount));
+  if (addInfo) params.append('addInfo', addInfo);
+  if (accountName) params.append('accountName', accountName);
+  return `${base}?${params.toString()}`;
 }
 
-onAuthStateChanged(auth, async (u)=>{
+// ===== State & Autofill =====
+const state = { user:null, balance:0, orderId:null, profile:{} };
+
+async function loadUserProfile(uid){
+  const userRef = doc(db, 'users', uid);
+  const snap = await getDoc(userRef);
+  if (!snap.exists()) return null;
+  const data = snap.data() || {};
+  return {
+    name: data.name || '',
+    phone: data.phone || '',
+    address: data.address || '',
+    email: data.email || '' // optional stored email
+  };
+}
+
+function applyProfileToForm(p){
+  const form = $('#payForm');
+  if (!form) return;
+  const f = new FormData(form);
+  const nameEl = form.querySelector('input[name="name"]');
+  const phoneEl = form.querySelector('input[name="phone"]');
+  const emailEl = form.querySelector('input[name="email"]');
+  const addrEl = form.querySelector('input[name="address"]');
+  if (nameEl) nameEl.value = p?.name || nameEl.value || '';
+  if (phoneEl) phoneEl.value = p?.phone || phoneEl.value || '';
+  if (emailEl) emailEl.value = p?.email || emailEl.value || state.user?.email || '';
+  if (addrEl) addrEl.value = p?.address || addrEl.value || '';
+}
+
+function setFormRequiredByAuth(isLoggedIn){
+  const form = $('#payForm');
+  if (!form) return;
+  // Logged-in: đã tự điền, vẫn để editable, giữ required để user không xoá trống
+  // Guest: required như bình thường
+  ['name','phone','email','address'].forEach(k=>{
+    const el = form.querySelector(`input[name="${k}"]`);
+    if (el) el.required = true;
+  });
+}
+
+// ===== Auth listener =====
+onAuthStateChanged(auth, async (u) => {
   state.user = u || null;
-  if (u) { await loadUserWallet(u); }
+  const acctBox = $('#acctBox');
+  if (u) {
+    // Hiển thị info account box
+    acctBox && (acctBox.style.display = 'block');
+    // Tải số dư + profile
+    try {
+      const userRef = doc(db, 'users', u.uid);
+      const snap = await getDoc(userRef);
+      if (snap.exists()) {
+        const data = snap.data();
+        state.balance = Number(data.balance || 0);
+        $('#meEmail') && ($('#meEmail').textContent = u.email || data.email || '—');
+        $('#meName') && ($('#meName').textContent = data.name || '—');
+        $('#meBalance') && ($('#meBalance').textContent = money(state.balance));
+      }
+    } catch {}
+    state.profile = await loadUserProfile(u.uid) || {};
+    // Ưu tiên email từ Auth
+    state.profile.email = u.email || state.profile.email || '';
+    applyProfileToForm(state.profile);
+    setFormRequiredByAuth(true);
+  } else {
+    acctBox && (acctBox.style.display = 'none');
+    setFormRequiredByAuth(false);
+  }
 });
 
+// ===== Init UI =====
 document.addEventListener('DOMContentLoaded', ()=>{
   const { cart, total } = renderCart();
   const form = $('#payForm');
@@ -176,18 +173,38 @@ document.addEventListener('DOMContentLoaded', ()=>{
     qrNote.textContent = `Chủ TK: ${BANK.accountName} — Ghi chú: ${add || 'Thanh toan don hang'}`;
   });
 
+  // ===== Submit =====
   form.addEventListener('submit', async (e)=>{
     e.preventDefault();
     const ok = $('#ok'), err = $('#err'); ok.style.display='none'; err.style.display='none';
 
     const data = Object.fromEntries(new FormData(form));
     const { cart: cartNow, total: totalNow } = renderCart(); // re-calc
+
+    // Nếu đã đăng nhập: lưu lại profile vừa sửa (nếu khác)
+    if (state.user) {
+      try {
+        const userRef = doc(db, 'users', state.user.uid);
+        await setDoc(userRef, {
+          name: data.name || '',
+          phone: data.phone || '',
+          address: data.address || '',
+          email: state.user.email || data.email || '',
+          updatedAt: serverTimestamp()
+        }, { merge: true });
+        state.profile = { ...state.profile, name: data.name, phone: data.phone, address: data.address, email: state.user.email || data.email };
+      } catch (e) { console.warn('update profile failed', e); }
+    }
+
     const payloadBase = {
       items: cartNow,
       total: totalNow,
       address: data.address,
       note: data.note||'',
       userId: state.user?.uid || null,
+      customer: { // lưu rõ vào đơn để xem nhanh
+        name: data.name, phone: data.phone, email: state.user?.email || data.email, address: data.address
+      },
       user: state.user ? { email: state.user.email } : { email: data.email, name: data.name, phone: data.phone },
       createdAt: serverTimestamp(),
     };
@@ -197,6 +214,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
         const u = state.user || getAuth().currentUser;
         if (!u){ alert('Vui lòng đăng nhập để dùng Ví tiền.'); return; }
         if (state.balance < totalNow){ err.textContent = 'Số dư không đủ để thanh toán bằng Ví tiền.'; err.style.display = 'block'; return; }
+        // Nếu bạn không dùng Functions (Spark plan), comment try/catch callable dưới để đi thẳng fallback.
         try{
           const placeOrderWithWallet = httpsCallable(functions, 'placeOrderWithWallet');
           const res = await placeOrderWithWallet({
@@ -205,7 +223,10 @@ document.addEventListener('DOMContentLoaded', ()=>{
           state.orderId = res.data?.orderId || null;
           ok.textContent = 'Đặt hàng & trừ ví thành công!';
           ok.style.display = 'block';
-          await sendOrderEmail({ id: state.orderId, method: 'WALLET', total: totalNow, items: cartNow, customer: { name: data.name, phone: data.phone, email: data.email, address: data.address } });
+          await sendOrderEmail({
+            id: state.orderId, method: 'WALLET', total: totalNow, items: cartNow,
+            customer: { name: data.name, phone: data.phone, email: state.user?.email || data.email, address: data.address }
+          });
           localStorage.removeItem('cart');
           return;
         } catch(callErr){
@@ -217,7 +238,10 @@ document.addEventListener('DOMContentLoaded', ()=>{
           state.orderId = odRef.id;
           ok.textContent = 'Đặt hàng thành công! Đơn đang chờ admin trừ ví.';
           ok.style.display = 'block';
-          await sendOrderEmail({ id: state.orderId, method: 'WALLET (pending)', total: totalNow, items: cartNow, customer: { name: data.name, phone: data.phone, email: data.email, address: data.address } });
+          await sendOrderEmail({
+            id: state.orderId, method: 'WALLET (pending)', total: totalNow, items: cartNow,
+            customer: { name: data.name, phone: data.phone, email: state.user?.email || data.email, address: data.address }
+          });
           localStorage.removeItem('cart');
           return;
         }
@@ -236,7 +260,10 @@ document.addEventListener('DOMContentLoaded', ()=>{
         $('#qrNote').textContent = `Nội dung chuyển khoản: ${addInfo}`;
         ok.textContent = 'Đã tạo đơn. Vui lòng quét mã để thanh toán!';
         ok.style.display = 'block';
-        await sendOrderEmail({ id: state.orderId, method: 'BANK', total: totalNow, items: cartNow, customer: { name: data.name, phone: data.phone, email: data.email, address: data.address } });
+        await sendOrderEmail({
+          id: state.orderId, method: 'BANK', total: totalNow, items: cartNow,
+          customer: { name: data.name, phone: data.phone, email: state.user?.email || data.email, address: data.address }
+        });
         return;
       }
       else {
@@ -248,7 +275,10 @@ document.addEventListener('DOMContentLoaded', ()=>{
         state.orderId = odRef.id;
         ok.textContent = 'Đặt hàng thành công!';
         ok.style.display = 'block';
-        await sendOrderEmail({ id: state.orderId, method: data.payment_method, total: totalNow, items: cartNow, customer: { name: data.name, phone: data.phone, email: data.email, address: data.address } });
+        await sendOrderEmail({
+          id: state.orderId, method: data.payment_method, total: totalNow, items: cartNow,
+          customer: { name: data.name, phone: data.phone, email: state.user?.email || data.email, address: data.address }
+        });
         localStorage.removeItem('cart');
       }
     }catch(ex){
