@@ -1,7 +1,7 @@
 // assets/checkout.js — ultra-safe DOM + autofill + email + invoice
 import { auth, db } from './firebase-config.js';
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
-import { doc, getDoc, addDoc, collection, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+import { doc, getDoc, addDoc, collection, serverTimestamp, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 import { BANK } from './app-config.js';
 
 const FORMSPREE_ENDPOINT = 'https://formspree.io/f/meozvdoo';
@@ -198,7 +198,42 @@ document.addEventListener('DOMContentLoaded', ()=>{
     const method = (fd.get('payment_method')||'COD').toString();
 
     if (!cart.length){ if (err){err.textContent='Giỏ hàng trống';err.style.display='block';} return; }
+    if (method === 'WALLET') {
+  let balance = 0;
+  let foundUser = false;
 
+  // 1) Ưu tiên lấy theo UID nếu user đã đăng nhập
+  const user = auth.currentUser;
+  if (user) {
+    const us = await getDoc(doc(db, 'users', user.uid));
+    if (us.exists()) {
+      balance = Number((us.data() || {}).balance || 0);
+      foundUser = true;
+    }
+  }
+
+  // 2) Fallback: tìm theo email điền ở form nếu chưa có UID
+  if (!foundUser) {
+    const email = (customer.email || '').trim().toLowerCase();
+    if (email) {
+      const qs = await getDocs(query(collection(db, 'users'), where('email', '==', email)));
+      if (!qs.empty) {
+        balance = Number((qs.docs[0].data() || {}).balance || 0);
+        foundUser = true;
+      }
+    }
+  }
+
+  // 3) Không tìm thấy tài khoản ví hoặc số dư không đủ → chặn
+  if (!foundUser) {
+    if (err) { err.textContent = 'Không tìm thấy tài khoản ví trùng email. Vui lòng đăng nhập hoặc dùng đúng email đã đăng ký.'; err.style.display = 'block'; }
+    return;
+  }
+  if (balance < Number(total || 0)) {
+    if (err) { err.textContent = 'Số dư Ví tiền không đủ. Vui lòng nạp thêm hoặc chọn phương thức khác.'; err.style.display = 'block'; }
+    return;
+  }
+}
     try{
       const odRef = await addDoc(collection(db,'orders'), {
         items: cart, total, customer,
