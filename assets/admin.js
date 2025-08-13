@@ -23,8 +23,11 @@ function mountProducts(){
     snap.forEach(docu=>{
       const p = { id: docu.id, ...docu.data() };
       const tr = document.createElement('tr');
-      tr.innerHTML = `<td>${p.name||''}</td><td>${p.price??''}</td><td>${p.original_price??''}</td>
+      tr.innerHTML = `<td>${p.name||''}</td>
+                      <td>${p.price??''}</td>
+                      <td>${p.original_price??''}</td>
                       <td>${p.is_sale?'✔':''}</td>
+                      <td>${p.category||'—'}</td>
                       <td>${p.image?`<a href="${p.image}" target="_blank">Xem</a>`:''}</td>
                       <td><button data-ed="${p.id}">Sửa</button> <button data-del="${p.id}">Xoá</button></td>`;
       rows.appendChild(tr);
@@ -38,6 +41,8 @@ function mountProducts(){
       $('#ad_original_price').value = p.original_price||'';
       $('#ad_image').value = p.image||'';
       $('#ad_is_sale').checked = !!p.is_sale;
+      const cat = $('#ad_category');
+      if (cat) cat.value = p.category || 'dieucay';
       window.scrollTo({top:0,behavior:'smooth'});
     });
     rows.querySelectorAll('button[data-del]').forEach(b=> b.onclick = async ()=>{
@@ -53,15 +58,23 @@ function mountProducts(){
       original_price: toNum($('#ad_original_price').value),
       image: $('#ad_image').value.trim(),
       is_sale: $('#ad_is_sale').checked,
+      category: ($('#ad_category')?.value)||'dieucay',
       updatedAt: serverTimestamp(),
     };
     if (!payload.name) { alert('Nhập tên sản phẩm'); return; }
     const id = $('#ad_docId').value;
     if (id) await updateDoc(doc(db,'products',id), payload);
     else await addDoc(collection(db,'products'), { ...payload, createdAt: serverTimestamp() });
-    $('#ad_docId').value=''; $('#ad_name').value=''; $('#ad_price').value=''; $('#ad_original_price').value=''; $('#ad_image').value=''; $('#ad_is_sale').checked=false;
+    // reset
+    $('#ad_docId').value=''; $('#ad_name').value=''; $('#ad_price').value='';
+    $('#ad_original_price').value=''; $('#ad_image').value=''; $('#ad_is_sale').checked=false;
+    if ($('#ad_category')) $('#ad_category').value='dieucay';
   };
-  $('#ad_reset').onclick = ()=>{ $('#ad_docId').value=''; $('#ad_name').value=''; $('#ad_price').value=''; $('#ad_original_price').value=''; $('#ad_image').value=''; $('#ad_is_sale').checked=false; };
+  $('#ad_reset').onclick = ()=>{ 
+    $('#ad_docId').value=''; $('#ad_name').value=''; $('#ad_price').value=''; 
+    $('#ad_original_price').value=''; $('#ad_image').value=''; $('#ad_is_sale').checked=false;
+    if ($('#ad_category')) $('#ad_category').value='dieucay';
+  };
 }
 
 // ---- Users ----

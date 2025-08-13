@@ -51,14 +51,11 @@ export async function renderFlashSale({ container = '#flashList' } = {}){
   const col = collection(db, 'products');
   const qMain = query(col, where('is_sale','==', true), orderBy('createdAt','desc'));
   const qFallback = query(col, where('is_sale','==', true)); // nếu thiếu index
-
   const snap = await _safeGetDocs(qMain, qFallback);
   if (snap.empty){ el.innerHTML = '<div class="muted">Chưa có sản phẩm Flash Sale.</div>'; return; }
-
   const items = [];
   snap.forEach(d => items.push({ id: d.id, ...d.data() }));
   el.innerHTML = items.map(cardHTML).join('');
-
   el.querySelectorAll('.buy-now').forEach(btn => {
     btn.addEventListener('click', () => {
       const p = items.find(x => x.id === btn.dataset.id);
@@ -67,13 +64,19 @@ export async function renderFlashSale({ container = '#flashList' } = {}){
   });
 }
 
-export async function renderProducts({ container = '#products .products' } = {}){
+export async function renderProducts({ container = '#products .products', category = 'all' } = {}){
   const el = document.querySelector(container);
   if (!el) return;
   el.innerHTML = '<div class="muted">Đang tải...</div>';
   const col = collection(db, 'products');
-  const qMain = query(col, orderBy('createdAt','desc'), limit(24));
-  const qFallback = query(col, limit(24));
+  let qMain, qFallback;
+  if (category !== 'all'){
+    qMain = query(col, where('category','==',category), orderBy('createdAt','desc'), limit(24));
+    qFallback = query(col, where('category','==',category), limit(24));
+  } else {
+    qMain = query(col, orderBy('createdAt','desc'), limit(24));
+    qFallback = query(col, limit(24));
+  }
   const snap = await _safeGetDocs(qMain, qFallback);
   const items = [];
   snap.forEach(d => items.push({ id: d.id, ...d.data() }));
@@ -86,6 +89,9 @@ export async function renderProducts({ container = '#products .products' } = {})
     });
   });
 }
+
+// expose for tabs
+window.renderProducts = renderProducts;
 
 // auto render products if container exists (homepage)
 document.addEventListener('DOMContentLoaded', ()=>{

@@ -36,15 +36,16 @@ img{max-width:100%;display:block}
 @media(max-width:1050px){.products{grid-template-columns:repeat(3,1fr)}}
 @media(max-width:800px){.products{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:520px){.products{grid-template-columns:1fr}}
-.card{background:var(--card);border-radius:14px;box-shadow:0 2px 10px rgba(0,0,0,.08);overflow:hidden;display:flex;flex-direction:column}
-.product__thumb{position:relative;cursor:pointer}
-.product__badge{position:absolute;left:8px;top:8px;background:var(--accent);color:#111827;font-weight:700;border-radius:999px;padding:4px 8px;font-size:12px}
-.product__thumb img{width:100%;height:170px;object-fit:cover;background:#e5e7eb}
+
+/* Generic product card (works with current markup) */
+.products > *{
+  background:var(--card);border-radius:14px;box-shadow:0 2px 10px rgba(0,0,0,.08);overflow:hidden;display:flex;flex-direction:column;
+}
+.product__media img{width:100%;height:170px;object-fit:cover;background:#e5e7eb}
 .product__body{padding:12px 12px 0}
 .product__title{margin:0 0 6px;font-size:16px}
 .product__price{font-weight:700;margin-bottom:8px;display:flex;gap:8px;align-items:center}
-.product__price del{color:#94a3b8}
-.product__actions{padding:12px}
+.product__price del,.price--strike{color:#94a3b8;text-decoration:line-through}
 
 /* Footer */
 .footer{background:#0f172a;color:#e2e8f0;padding:28px 0;margin-top:28px}
@@ -56,14 +57,14 @@ img{max-width:100%;display:block}
 .drawer.open .drawer__overlay{opacity:1;}
 .drawer__overlay{
   position:absolute;inset:0;background:rgba(0,0,0,.5);
-  opacity:0;                          /* + */
-  transition:opacity .2s;             /* + */
+  opacity:0;
+  transition:opacity .2s;
 }
 .drawer__panel{
   position:absolute;top:0;right:0;height:100%;width:360px;background:#fff;
   display:flex;flex-direction:column;
-  transform:translateX(100%);         /* + */
-  transition:transform .25s ease;     /* + */
+  transform:translateX(100%);
+  transition:transform .25s ease;
 }
 .drawer.open .drawer__panel{transform:translateX(0);}
 .drawer__head{display:flex;justify-content:space-between;align-items:center;padding:14px;border-bottom:1px solid var(--line)}
@@ -86,7 +87,7 @@ textarea{resize:vertical}
 .alert.success{background:#ecfdf5;color:#065f46;border:1px solid #a7f3d0}
 .alert.error{background:#fef2f2;color:#991b1b;border:1px solid #fecaca}
 
-/* Zalo floating button */
+/* Floating buttons */
 .phone-fab, .facebook-fab, .zalo-fab {
   position: fixed;
   right: 18px;
@@ -105,30 +106,19 @@ textarea{resize:vertical}
   display: block;
   border-radius: 50%;
 }
-
-/* Vị trí từng nút */
 .zalo-fab { bottom: 18px; }
-.facebook-fab { bottom: 84px; } /* 56px + 10px khoảng cách */
-.phone-fab { bottom: 150px; }   /* 56px + 10px khoảng cách tiếp */
+.facebook-fab { bottom: 84px; }
+.phone-fab { bottom: 150px; }
+
 /* Toast */
 #toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--brand);color:#fff;padding:10px 14px;border-radius:10px;display:none;box-shadow:0 6px 20px rgba(0,0,0,.2);z-index:9999}
-/* iOS Safari: tôn trọng kích thước text người dùng */
+#toast.show{display:block}
+
+/* iOS-friendly text & viewport */
 html { -webkit-text-size-adjust: 100%; }
-
-/* Sửa “100vh bug” trên iOS (thanh địa chỉ co/giãn) */
 html, body { height: 100%; }
-body {
-  min-height: 100vh;                 /* tiêu chuẩn */
-  min-height: -webkit-fill-available;/* iOS fallback */
-}
-
-/* Ưu tiên đơn vị viewport hiện đại (Safari 15+):
-   Dùng cho hero, banner cao toàn màn hình nếu có */
-.fullvh {
-  min-height: 100svh;                 /* small viewport height */
-}
-
-/* Safe-area cho máy có tai thỏ (Dynamic Island/notch) */
+body { min-height: 100vh; min-height: -webkit-fill-available; }
+.fullvh { min-height: 100svh; }
 :root {
   --safe-top: env(safe-area-inset-top);
   --safe-right: env(safe-area-inset-right);
@@ -141,32 +131,25 @@ body {
   padding-bottom: calc(0px + var(--safe-bottom));
   padding-left: calc(0px + var(--safe-left));
 }
-
-/* Ngăn iOS tự zoom khi focus input (font < 16px) */
-input, select, textarea, button {
-  font-size: 16px; /* >=16px sẽ không auto-zoom */
-}
-
-/* Ảnh & video responsive đúng tỉ lệ (kể cả Safari) */
-img, video { max-width: 100%; height: auto; }
-
-/* Cải thiện tap trên iOS (tuỳ chọn) */
+input, select, textarea, button { font-size: 16px; }
 * { -webkit-tap-highlight-color: rgba(0,0,0,0.1); }
 
-.hero {
-  padding: 24px 0 !important;        /* Giảm khoảng cách trên/dưới */
-}
+/* Hero adjustments */
+.hero { padding: 24px 0 !important; }
+.hero__inner { max-width: 960px; margin: 0 auto; flex-wrap: wrap; }
+.hero__logo { max-width: 200px; height: auto; }
 
-.hero__inner {
-  max-width: 960px;                   /* Giới hạn bề ngang hero */
-  margin: 0 auto;                     /* Canh giữa */
-  flex-wrap: wrap;                    /* Cho xuống dòng nếu hẹp */
-}
+/* Category tabs */
+.category-tabs{display:flex;gap:8px;margin:10px 0 14px;overflow-x:auto;padding-bottom:4px}
+.category-tabs button{padding:8px 14px;border:1px solid #cbd5e1;background:#fff;border-radius:999px;cursor:pointer;white-space:nowrap}
+.category-tabs button.active{background:var(--brand);color:#fff;border-color:var(--brand)}
 
-.hero__logo {
-  max-width: 200px;                   /* Giảm kích thước logo */
-  height: auto;
+/* iOS Safari: horizontal scroll list with snap */
+html.is-ios-safari #products .products{
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(220px, 70vw);
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
 }
-
-/* Sale strike price */
-.price--strike{ text-decoration: line-through; opacity:.6; font-size:.95em; }
+html.is-ios-safari #products .products > *{ scroll-snap-align: start; } 
