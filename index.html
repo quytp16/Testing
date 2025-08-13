@@ -2,10 +2,12 @@
 <html lang="vi">
 <head>
   <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <!-- Viewport chuẩn iOS, cho phép zoom của người dùng -->
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <!-- (tuỳ chọn) Trải nghiệm web-app toàn màn hình khi thêm vào Home Screen -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=yes">
+  <meta name="format-detection" content="telephone=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+<!-- Viewport chuẩn iOS, cho phép zoom của người dùng -->
+<!-- (tuỳ chọn) Trải nghiệm web-app toàn màn hình khi thêm vào Home Screen -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <title>Tuấn Anh Điếu Cày — Cửa hàng điếu cày & thuốc lào</title>
@@ -32,6 +34,16 @@
     .muted.small{font-size:12px;color:#64748b}
     @media(max-width:900px){.admin .grid{grid-template-columns:1fr}}
   </style>
+<style>
+  /* iOS Safari scaling & safe-area tweaks */
+  html { -webkit-text-size-adjust: 100%; }
+  body { min-height: 100dvh; }
+  img, video { max-width: 100%; height: auto; }
+  /* Prevent zoom on inputs by keeping font-size >= 16px */
+  input, select, textarea { font-size: 16px; }
+  /* Respect iPhone safe areas for full-bleed headers/footers if any */
+  :root { padding-top: env(safe-area-inset-top); padding-right: env(safe-area-inset-right); padding-bottom: env(safe-area-inset-bottom); padding-left: env(safe-area-inset-left); }
+</style>
 </head>
 <body>
 <header class="header">
@@ -46,7 +58,6 @@
       <button class="btn" id="btnAccount">Đăng nhập</button>
       <span class="badge" id="badgeRole" style="display:none"></span>
       <button class="btn" id="openCart">Giỏ hàng <span class="badge" id="cartCount">0</span></button>
-      <a class="btn" href="checkout.html">Đặt hàng</a>
     </div>
   </div>
 </header>
