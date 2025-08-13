@@ -1,4 +1,4 @@
-// assets/auth.js — hiển thị email trên nút, thêm nút Đăng xuất khi đã đăng nhập
+// assets/auth.js — hiển thị email trên nút, logout, ví #wallet & panel admin
 import { auth, db } from './firebase-config.js';
 import {
   createUserWithEmailAndPassword,
@@ -7,9 +7,7 @@ import {
   onAuthStateChanged,
   updateProfile
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
-import {
-  doc, setDoc, getDoc, serverTimestamp
-} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+import { doc, setDoc, getDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
 const $ = (s)=>document.querySelector(s);
 const money = n => (n||0).toLocaleString('vi-VN') + '₫';
@@ -38,42 +36,38 @@ async function saveUserDoc(uid, {name, phone, address, email}, extra={}){
   }, { merge: true });
 }
 
-/* ===== SIGNUP ===== */
-const formSignup = $('#formSignup');
-if (formSignup){
-  formSignup.addEventListener('submit', async (e)=>{
-    e.preventDefault();
-    const btn = formSignup.querySelector('[type="submit"]'); btn && (btn.disabled = true);
-    try{
-      const { name, phone, address, email, password } = getProfileFromForm(formSignup);
-      if (!email || !password) throw new Error('Vui lòng nhập email và mật khẩu');
-      const cred = await createUserWithEmailAndPassword(auth, email, password);
-      await updateProfile(cred.user, { displayName: name || '' });
-      await saveUserDoc(cred.user.uid, { name, phone, address, email }, { role:'user', balance:0, createdAt:true });
-      closeAnyModal();
-    }catch(err){ alert(err.message || 'Đăng ký thất bại'); }
-    finally{ btn && (btn.disabled = false); }
-  });
-}
+/* SIGNUP */
+$('#formSignup')?.addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  const form = e.currentTarget;
+  const btn = form.querySelector('[type="submit"]'); btn && (btn.disabled = true);
+  try{
+    const { name, phone, address, email, password } = getProfileFromForm(form);
+    if (!email || !password) throw new Error('Vui lòng nhập email và mật khẩu');
+    const cred = await createUserWithEmailAndPassword(auth, email, password);
+    await updateProfile(cred.user, { displayName: name || '' });
+    await saveUserDoc(cred.user.uid, { name, phone, address, email }, { role:'user', balance:0, createdAt:true });
+    closeAnyModal();
+  }catch(err){ console.error('[signup]', err); alert(err.message || 'Đăng ký thất bại'); }
+  finally{ btn && (btn.disabled = false); }
+});
 
-/* ===== LOGIN ===== */
-const formLogin = $('#formLogin');
-if (formLogin){
-  formLogin.addEventListener('submit', async (e)=>{
-    e.preventDefault();
-    const btn = formLogin.querySelector('[type="submit"]'); btn && (btn.disabled = true);
-    try{
-      const data = new FormData(formLogin);
-      const email = (data.get('email')||'').toString().trim();
-      const password = (data.get('password')||'').toString();
-      await signInWithEmailAndPassword(auth, email, password);
-      closeAnyModal();
-    }catch(err){ alert(err.message || 'Đăng nhập thất bại'); }
-    finally{ btn && (btn.disabled = false); }
-  });
-}
+/* LOGIN */
+$('#formLogin')?.addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  const form = e.currentTarget;
+  const btn = form.querySelector('[type="submit"]'); btn && (btn.disabled = true);
+  try{
+    const data = new FormData(form);
+    const email = (data.get('email')||'').toString().trim();
+    const password = (data.get('password')||'').toString();
+    await signInWithEmailAndPassword(auth, email, password);
+    closeAnyModal();
+  }catch(err){ console.error('[login]', err); alert(err.message || 'Đăng nhập thất bại'); }
+  finally{ btn && (btn.disabled = false); }
+});
 
-/* ===== LOGOUT ===== */
+/* LOGOUT button */
 function ensureLogoutButton(){
   const cta = document.querySelector('.header__cta');
   if (!cta) return null;
@@ -91,24 +85,24 @@ function ensureLogoutButton(){
 
 function closeAnyModal(){ document.querySelector('.modal.open')?.classList.remove('open'); }
 
-/* ===== AUTH STATE ===== */
+/* AUTH STATE */
 onAuthStateChanged(auth, async (user)=>{
-  const walletBox  = $('#wallet');
+  const walletBox  = $('#wallet');      // đúng id trong index.html
   const badge      = $('#badgeRole');
   const adminPanel = $('#adminPanel');
   const btnAccount = $('#btnAccount');
-  const btnLogout  = ensureLogoutButton(); // tạo nếu chưa có
+  const btnLogout  = ensureLogoutButton();
 
-  // Cờ để code ở index.html biết đã đăng nhập hay chưa
   window.__SIGNED_IN = !!user;
+  console.log('[auth] signedIn =', window.__SIGNED_IN, 'user =', user?.email);
 
   if (user){
-    // Lấy doc user
+    // Lấy user doc
     let d = {};
     try {
       const snap = await getDoc(doc(db,'users', user.uid));
       if (snap.exists()) d = snap.data();
-    } catch (e) { console.warn('getDoc users/{uid} failed:', e); }
+    } catch (e) { console.warn('[auth] getDoc users/{uid} failed:', e); }
 
     // Cập nhật ví
     if (walletBox) walletBox.style.display = 'block';
@@ -124,8 +118,7 @@ onAuthStateChanged(auth, async (user)=>{
     // Nút tài khoản hiển thị email, không mở modal nữa
     if (btnAccount){
       btnAccount.textContent = user.email || 'Tài khoản';
-      // chặn mở modal: gán onclick riêng
-      btnAccount.onclick = (e)=>{ e.preventDefault(); /* sau này có thể mở dropdown tài khoản ở đây */ };
+      btnAccount.onclick = (e)=>{ e.preventDefault(); };
     }
     if (btnLogout) btnLogout.style.display = 'inline-block';
   } else {
@@ -133,10 +126,9 @@ onAuthStateChanged(auth, async (user)=>{
     if (badge){ badge.textContent = ''; badge.style.display = 'none'; }
     if (adminPanel) adminPanel.style.display = 'none';
 
-    // Nút tài khoản quay lại "Đăng nhập" và cho phép mở modal
     if (btnAccount){
       btnAccount.textContent = 'Đăng nhập';
-      btnAccount.onclick = null; // dùng handler mặc định ở index.html để mở modal
+      btnAccount.onclick = null; // dùng handler trong index.html để mở modal
     }
     if (btnLogout) btnLogout.style.display = 'none';
   }
