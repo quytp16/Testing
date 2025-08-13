@@ -153,5 +153,20 @@ img, video { max-width: 100%; height: auto; }
 /* Cải thiện tap trên iOS (tuỳ chọn) */
 * { -webkit-tap-highlight-color: rgba(0,0,0,0.1); }
 
+.hero {
+  padding: 24px 0 !important;        /* Giảm khoảng cách trên/dưới */
+}
+
+.hero__inner {
+  max-width: 960px;                   /* Giới hạn bề ngang hero */
+  margin: 0 auto;                     /* Canh giữa */
+  flex-wrap: wrap;                    /* Cho xuống dòng nếu hẹp */
+}
+
+.hero__logo {
+  max-width: 200px;                   /* Giảm kích thước logo */
+  height: auto;
+}
+
 /* Sale strike price */
 .price--strike{ text-decoration: line-through; opacity:.6; font-size:.95em; }
