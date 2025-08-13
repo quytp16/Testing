@@ -1,34 +1,35 @@
 
-// app.js — minimal cart & drawer controller
+// app.js — tailored for current HTML/CSS (drawer__overlay inside #cartDrawer)
 (function () {
-  const drawer = document.getElementById('cartDrawer');
-  const btnOpen = document.getElementById('openCart');
-  const btnX = document.getElementById('xCart');
-  const overlay = document.getElementById('closeCart');
-  const listEl = document.getElementById('drawerItems');
-  const totalEl = document.getElementById('drawerTotal');
-  const countEl = document.getElementById('cartCount');
-  const toast = document.getElementById('toast');
+  // ---- Element refs
+  const $ = (s) => document.querySelector(s);
+  const drawer     = $('#cartDrawer');
+  const btnOpen    = $('#openCart');
+  const btnClose   = $('#xCart');
+  const overlay    = $('#closeCart');
+  const listEl     = $('#drawerItems');
+  const totalEl    = $('#drawerTotal');
+  const countEl    = $('#cartCount');
+  const toastEl    = $('#toast');
 
-  const fmt = (n) => (new Intl.NumberFormat('vi-VN').format(n || 0) + '₫');
+  // ---- Utils
+  const fmt = (n) => new Intl.NumberFormat('vi-VN').format(Number(n) || 0) + '₫';
 
-  // ---- Cart storage helpers ----
   function loadCart() {
-    try {
-      return JSON.parse(localStorage.getItem('cart') || '[]');
-    } catch {
-      return [];
-    }
+    try { return JSON.parse(localStorage.getItem('cart') || '[]'); }
+    catch { return []; }
   }
   function saveCart(cart) {
     localStorage.setItem('cart', JSON.stringify(cart));
     updateBadge(cart);
   }
   function updateBadge(cart = loadCart()) {
-    if (countEl) countEl.textContent = cart.reduce((s, i) => s + (i.qty || 1), 0);
+    if (!countEl) return;
+    const c = cart.reduce((s, i) => s + (Number(i.qty) || 1), 0);
+    countEl.textContent = String(c);
   }
 
-  // ---- Drawer open/close ----
+  // ---- Drawer
   function openDrawer() {
     if (!drawer) return;
     drawer.classList.add('open');
@@ -39,7 +40,7 @@
     drawer.classList.remove('open');
   }
 
-  // ---- Drawer rendering ----
+  // ---- Render items
   function renderDrawer() {
     if (!listEl || !totalEl) return;
     const cart = loadCart();
@@ -56,41 +57,42 @@
       const line = price * qty;
       sum += line;
       return `
-        <div class="drawer__item" data-idx="${idx}">
-          <img src="${i.image || ''}" alt="" onerror="this.style.display='none'"/>
-          <div class="drawer__meta">
-            <div class="drawer__name">${i.name || 'Sản phẩm'}</div>
-            <div class="drawer__price">${fmt(price)}</div>
-            <div class="qty">
+        <div class="drawer__item" data-idx="${idx}" style="display:flex;gap:10px;align-items:center">
+          <img src="${i.image || ''}" alt="" style="width:56px;height:56px;object-fit:cover;border-radius:8px" onerror="this.style.display='none'">
+          <div style="flex:1">
+            <div style="font-weight:600">${i.name || 'Sản phẩm'}</div>
+            <div class="muted" style="font-size:12px">${fmt(price)} × ${qty}</div>
+            <div class="qty" style="display:flex;gap:6px;align-items:center;margin-top:6px">
               <button class="qty__btn" data-act="dec">-</button>
-              <input class="qty__input" type="number" min="1" value="${qty}" />
+              <input class="qty__input" type="number" min="1" value="${qty}" style="width:54px;text-align:center">
               <button class="qty__btn" data-act="inc">+</button>
               <button class="icon-btn" data-act="remove" aria-label="Xóa">×</button>
             </div>
           </div>
+          <div style="min-width:96px;text-align:right;font-weight:700">${fmt(line)}</div>
         </div>`;
     }).join('');
     totalEl.textContent = fmt(sum);
     updateBadge(cart);
   }
 
-  // ---- Quantity & remove inside drawer (event delegation) ----
+  // ---- Event delegation for qty/remove
   listEl?.addEventListener('click', (e) => {
-    const btn = e.target.closest('[data-act]');
-    if (!btn) return;
+    const actBtn = e.target.closest('[data-act]');
+    if (!actBtn) return;
     const row = e.target.closest('[data-idx]');
     if (!row) return;
     const idx = Number(row.dataset.idx);
     const cart = loadCart();
     if (Number.isNaN(idx) || idx < 0 || idx >= cart.length) return;
 
-    const act = btn.dataset.act;
+    const act = actBtn.dataset.act;
     if (act === 'remove') {
       cart.splice(idx, 1);
     } else if (act === 'inc') {
-      cart[idx].qty = (cart[idx].qty || 1) + 1;
+      cart[idx].qty = (Number(cart[idx].qty) || 1) + 1;
     } else if (act === 'dec') {
-      cart[idx].qty = Math.max(1, (cart[idx].qty || 1) - 1);
+      cart[idx].qty = Math.max(1, (Number(cart[idx].qty) || 1) - 1);
     }
     saveCart(cart);
     renderDrawer();
@@ -102,29 +104,27 @@
     if (!row) return;
     const idx = Number(row.dataset.idx);
     const cart = loadCart();
-    const val = Math.max(1, Number(input.value || 1));
-    cart[idx].qty = val;
+    cart[idx].qty = Math.max(1, Number(input.value || 1));
     saveCart(cart);
     renderDrawer();
   });
 
-  // ---- Wire open/close buttons ----
+  // ---- Wire controls
   btnOpen?.addEventListener('click', openDrawer);
+  btnClose?.addEventListener('click', closeDrawer);
   overlay?.addEventListener('click', closeDrawer);
-  btnX?.addEventListener('click', closeDrawer);
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') closeDrawer();
   });
 
-  // ---- Global addToCart helper (use from product buttons if needed) ----
-  // Usage (example):
-  //   <button onclick="addToCart({id:'p1',name:'Điếu cày',price:100000,image:'...'})">Mua ngay</button>
+  // ---- Add to cart API
   window.addToCart = function (item) {
     if (!item) return;
     const cart = loadCart();
-    const idx = cart.findIndex(x => String(x.id) === String(item.id));
+    const key = String(item.id ?? '');
+    const idx = cart.findIndex(x => String(x.id ?? '') === key && key !== '');
     if (idx >= 0) {
-      cart[idx].qty = (cart[idx].qty || 1) + (Number(item.qty) || 1);
+      cart[idx].qty = (Number(cart[idx].qty) || 1) + (Number(item.qty) || 1);
     } else {
       cart.push({
         id: item.id ?? Date.now(),
@@ -137,14 +137,14 @@
     saveCart(cart);
     renderDrawer();
     openDrawer();
-    if (toast) {
-      toast.textContent = 'Đã thêm vào giỏ hàng';
-      toast.classList.add('show');
-      setTimeout(() => toast.classList.remove('show'), 1200);
+    if (toastEl) {
+      toastEl.textContent = 'Đã thêm vào giỏ hàng';
+      toastEl.style.display = 'block';
+      setTimeout(() => { toastEl.style.display = 'none'; }, 1200);
     }
   };
 
-  // Fallback: event delegation for generic buttons with data attributes
+  // ---- Auto-bind buttons with data attributes
   document.addEventListener('click', (e) => {
     const btn = e.target.closest('[data-add-cart],[data-add]');
     if (!btn) return;
@@ -153,19 +153,12 @@
       name: btn.dataset.name,
       price: Number(btn.dataset.price || 0),
       image: btn.dataset.image,
-      qty: Number(btn.dataset.qty || 1)
+      qty: Number(btn.dataset.qty || 1),
     };
     window.addToCart(item);
   });
 
-  // Init
+  // ---- Init
   updateBadge();
   renderDrawer();
-
-  // Optional: ensure CSS visibility if theme misses it
-  // (Only applies when .drawer.open is not styled in CSS)
-  // We use inline style guards to avoid double-defining.
-  if (drawer && getComputedStyle(drawer).display === 'none') {
-    // do nothing; site CSS already handles display
-  }
 })();
