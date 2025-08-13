@@ -77,7 +77,8 @@ const moneyVN = n => (n||0).toLocaleString('vi-VN') + '₫';
 function buildEmailHTML({ id, method, total, items, customer }) {
   const lines = (items||[]).map(i =>
     `<li><strong>${i.name}</strong> × ${i.qty} — ${moneyVN(i.price||0)}</li>`
-  ).join('');
+  ).join('
+');
   return `
     <div style="font-family:Inter,Arial,sans-serif;font-size:14px;line-height:1.5;color:#111">
       <h2 style="margin:0 0 8px">🛒 Đơn hàng #${id||'N/A'}</h2>
