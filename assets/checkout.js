@@ -62,6 +62,84 @@ onAuthStateChanged(auth, async (u)=>{
   if (u) { await loadUserWallet(u); }
 });
 
+
+
+
+// === Formspree email helper (HTML-preferred) ===
+// Notes:
+// - _cc: Formspree supports CC (free).
+// - _bcc: May require a paid plan; kept optional. If not supported on your plan, Formspree ignores it.
+const FORMSPREE_ENDPOINT = "https://formspree.io/f/meozvdoo";
+const BCC_EMAILS = []; // e.g., ['boss@example.com','archive@example.com']
+
+const moneyVN = n => (n||0).toLocaleString('vi-VN') + '₫';
+
+function buildEmailHTML({ id, method, total, items, customer }) {
+  const lines = (items||[]).map(i =>
+    `<li><strong>${i.name}</strong> × ${i.qty} — ${moneyVN(i.price||0)}</li>`
+  ).join('');
+  return `
+    <div style="font-family:Inter,Arial,sans-serif;font-size:14px;line-height:1.5;color:#111">
+      <h2 style="margin:0 0 8px">🛒 Đơn hàng #${id||'N/A'}</h2>
+      <p style="margin:0 0 8px"><b>Phương thức:</b> ${method} &nbsp; • &nbsp; <b>Tổng:</b> ${moneyVN(total)}</p>
+      <hr style="border:none;border-top:1px solid #eee;margin:12px 0">
+      <h3 style="margin:0 0 6px">Khách hàng</h3>
+      <p style="margin:0 0 8px">
+        <b>Họ tên:</b> ${customer.name||'-'}<br>
+        <b>Điện thoại:</b> ${customer.phone||'-'}<br>
+        <b>Email:</b> ${customer.email||'-'}<br>
+        <b>Địa chỉ:</b> ${customer.address||'-'}
+      </p>
+      <h3 style="margin:12px 0 6px">Sản phẩm</h3>
+      <ul style="margin:0;padding-left:18px">${lines||'<li>(trống)</li>'}</ul>
+    </div>
+  `;
+}
+
+function buildEmailText(args) {
+  const { id, method, total, items, customer } = args;
+  const lines = (items||[]).map(i => `• ${i.name} x${i.qty} — ${moneyVN(i.price||0)}`).join('
+');
+  return (
+`Đơn #${id||'N/A'}
+Phương thức: ${method}  |  Tổng: ${moneyVN(total)}
+
+Khách hàng
+- Họ tên: ${customer.name||'-'}
+- Điện thoại: ${customer.phone||'-'}
+- Email: ${customer.email||'-'}
+- Địa chỉ: ${customer.address||'-'}
+
+Sản phẩm
+${lines||'(trống)'}`
+  );
+}
+
+async function sendOrderEmail({ id, method, total, items, customer }) {
+  if (!FORMSPREE_ENDPOINT) return;
+  try {
+    const subject = `🛒 Đơn hàng mới #${id||'N/A'} – ${method}`;
+    const html = buildEmailHTML({ id, method, total, items, customer });
+    const text = buildEmailText({ id, method, total, items, customer });
+
+    const body = new FormData();
+    body.append('subject', subject);
+    // Many Formspree setups accept HTML in 'message'. We also include a hint:
+    body.append('message', html);
+    body.append('_format', 'html');
+    // Fallback text (some setups display both; harmless):
+    body.append('alt_text', text);
+
+    if (customer.email) body.append('_cc', customer.email);
+    if (Array.isArray(BCC_EMAILS)) {
+      BCC_EMAILS.forEach(e => e && body.append('_bcc', e));
+    }
+
+    await fetch(FORMSPREE_ENDPOINT, { method: 'POST', body });
+  } catch (e) {
+    console.warn('Send mail failed:', e);
+  }
+}
 document.addEventListener('DOMContentLoaded', ()=>{
   const { cart, total } = renderCart();
   const form = $('#payForm');
@@ -132,6 +210,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
           state.orderId = res.data?.orderId || null;
           ok.textContent = 'Đặt hàng & trừ ví thành công!';
           ok.style.display = 'block';
+          await sendOrderEmail({ id: state.orderId, method: 'WALLET', total: totalNow, items: cartNow, customer: { name: data.name, phone: data.phone, email: data.email, address: data.address } });
           localStorage.removeItem('cart');
           return;
         } catch(callErr){
@@ -144,6 +223,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
           state.orderId = odRef.id;
           ok.textContent = 'Đặt hàng thành công! Đơn đang chờ admin trừ ví.';
           ok.style.display = 'block';
+          await sendOrderEmail({ id: state.orderId, method: 'WALLET (pending)', total: totalNow, items: cartNow, customer: { name: data.name, phone: data.phone, email: data.email, address: data.address } });
           localStorage.removeItem('cart');
           return;
         }
@@ -162,6 +242,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
         $('#qrNote').textContent = `Nội dung chuyển khoản: ${addInfo}`;
         ok.textContent = 'Đã tạo đơn. Vui lòng quét mã để thanh toán!';
         ok.style.display = 'block';
+        await sendOrderEmail({ id: state.orderId, method: 'BANK', total: totalNow, items: cartNow, customer: { name: data.name, phone: data.phone, email: data.email, address: data.address } });
         // Giữ cart đến khi người dùng xác nhận đã chuyển tiền
         return;
       }
@@ -173,6 +254,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
         });
         ok.textContent = 'Đặt hàng thành công!';
         ok.style.display = 'block';
+        await sendOrderEmail({ id: null, method: data.payment_method, total: totalNow, items: cartNow, customer: { name: data.name, phone: data.phone, email: data.email, address: data.address } });
         localStorage.removeItem('cart');
       }
     }catch(ex){

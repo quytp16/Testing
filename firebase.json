@@ -10,7 +10,8 @@
   "functions": [
     {
       "source": "functions",
-      "codebase": "default",
+      "runtime": "nodejs18",
+      "region": "asia-southeast1",
       "ignore": [
         "node_modules",
         ".git",
@@ -18,9 +19,13 @@
         "firebase-debug.*.log",
         "*.local"
       ],
-      "predeploy": [
-        "npm --prefix \"$RESOURCE_DIR\" run lint"
-      ]
+      "firestore": {
+       "rules": "firestore.rules"
+      },
+       "hosting": {
+        "public": ".",
+        "ignore": ["firebase.json", "**/.*", "**/node_modules/**"]
+      } 
     }
   ]
 }
