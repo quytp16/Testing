@@ -19,16 +19,26 @@
 <section class="checkout"><div class="container">
   <h1>Thanh toán</h1>
   <div class="checkout__wrap">
+    <!-- Box: Tóm tắt + thông tin tài khoản -->
     <div class="box">
       <h3>Thông tin đơn hàng</h3>
-      <div><strong>Email:</strong> <span id="meEmail">—</span></div><div><strong>Họ tên:</strong> <span id="meName">—</span></div><div><strong>Số dư ví:</strong> <span id="meBalance">0₫</span></div><hr><div id="summary"></div>
+      <div id="summary"></div>
       <div class="total"><span>Tổng cộng:</span><strong id="sumTotal">0₫</strong></div>
+      <div id="acctBox" class="box" style="margin-top:10px; display:none">
+        <div><strong>Email:</strong> <span id="meEmail">—</span></div>
+        <div><strong>Họ tên:</strong> <span id="meName">—</span></div>
+        <div><strong>Số dư ví:</strong> <span id="meBalance">0₫</span></div>
+      </div>
     </div>
+
+    <!-- Box: VietQR (chỉ hiện khi chọn BANK) -->
     <div id="qrBox" class="box" style="display:none">
       <h3>Chuyển khoản VietQR</h3>
       <img id="vietqrImg" alt="VietQR" style="max-width:320px;width:100%;height:auto"/>
       <div class="muted small" id="qrNote"></div>
     </div>
+
+    <!-- Box: Form khách hàng -->
     <div class="box">
       <h3>Thông tin khách hàng</h3>
       <form id="payForm" class="form-grid">
