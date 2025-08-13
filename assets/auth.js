@@ -1,4 +1,4 @@
-// assets/auth.js (enhanced: signup with name/phone/address, save profile)
+// assets/auth.js — signup lưu đủ name/phone/address, hiển thị ví #wallet khi đăng nhập
 import { auth, db } from './firebase-config.js';
 import {
   createUserWithEmailAndPassword,
@@ -14,7 +14,7 @@ import {
 const $ = (s)=>document.querySelector(s);
 const money = n => (n||0).toLocaleString('vi-VN') + '₫';
 
-/** Build profile object from a form (gracefully handles missing fields) */
+/** Lấy dữ liệu từ form (có field nào thì lấy, thiếu không sao) */
 function getProfileFromForm(form){
   const data = new FormData(form);
   return {
@@ -26,10 +26,9 @@ function getProfileFromForm(form){
   };
 }
 
-/** Write users/{uid} with profile fields (merge) */
+/** Ghi users/{uid} (merge) với các trường hồ sơ */
 async function saveUserDoc(uid, {name, phone, address, email}, extra={}){
-  const userRef = doc(db, 'users', uid);
-  await setDoc(userRef, {
+  await setDoc(doc(db, 'users', uid), {
     name: name || '',
     phone: phone || '',
     address: address || '',
@@ -41,17 +40,7 @@ async function saveUserDoc(uid, {name, phone, address, email}, extra={}){
   }, { merge: true });
 }
 
-/* ======= SIGNUP =======
-  Expected form markup:
-  <form id="formSignup">
-    <input name="name" required>
-    <input name="phone" required>
-    <input name="address" required>
-    <input name="email" type="email" required>
-    <input name="password" type="password" required>
-    <button type="submit">Đăng ký</button>
-  </form>
-*/
+/* ======= SIGNUP ======= */
 const formSignup = $('#formSignup');
 if (formSignup){
   formSignup.addEventListener('submit', async (e)=>{
@@ -62,11 +51,8 @@ if (formSignup){
       const { name, phone, address, email, password } = getProfileFromForm(formSignup);
       if (!email || !password) throw new Error('Vui lòng nhập email và mật khẩu');
       const cred = await createUserWithEmailAndPassword(auth, email, password);
-      // Update displayName
       await updateProfile(cred.user, { displayName: name || '' });
-      // Write Firestore user
       await saveUserDoc(cred.user.uid, { name, phone, address, email }, { role:'user', balance:0, createdAt:true });
-      // UX: close modal if any
       closeAnyModal();
     }catch(err){
       alert(err.message || 'Đăng ký thất bại');
@@ -76,14 +62,7 @@ if (formSignup){
   });
 }
 
-/* ======= LOGIN =======
-  Expected form markup:
-  <form id="formLogin">
-    <input name="email" type="email" required>
-    <input name="password" type="password" required>
-    <button type="submit">Đăng nhập</button>
-  </form>
-*/
+/* ======= LOGIN ======= */
 const formLogin = $('#formLogin');
 if (formLogin){
   formLogin.addEventListener('submit', async (e)=>{
@@ -104,35 +83,51 @@ if (formLogin){
   });
 }
 
-/* ======= LOGOUT ======= */
-const btnLogout = $('#btnLogout');
-btnLogout && btnLogout.addEventListener('click', async ()=>{
+/* ======= LOGOUT (nếu có nút) ======= */
+$('#btnLogout')?.addEventListener('click', async ()=>{
   await signOut(auth);
 });
 
-/** Optional helper to close modal if your UI uses .modal.open */
+/** Đóng modal (nếu UI đang dùng .modal.open) */
 function closeAnyModal(){
-  const m = document.querySelector('.modal.open');
-  if (m) m.classList.remove('open');
+  document.querySelector('.modal.open')?.classList.remove('open');
 }
 
-/* ======= AUTH STATE ======= */
+/* ======= AUTH STATE: hiển thị ví #wallet + role + admin panel ======= */
 onAuthStateChanged(auth, async (user)=>{
-  const acctBox = $('#acctBox');
-  const badge = $('#badgeRole');
+  const walletBox  = $('#wallet');      // <-- id đúng trong index.html
+  const badge      = $('#badgeRole');
+  const adminPanel = $('#adminPanel');
+  const btnAccount = $('#btnAccount');
+
   if (user){
-    // Show wallet/account snippet if exist
-    try{
+    // Lấy hồ sơ Firestore
+    let d = {};
+    try {
       const snap = await getDoc(doc(db,'users', user.uid));
-      const d = snap.exists() ? snap.data() : {};
-      $('#meEmail') && ($('#meEmail').textContent = user.email || d.email || '—');
-      $('#meName') && ($('#meName').textContent = d.name || user.displayName || '—');
-      $('#meBalance') && ($('#meBalance').textContent = money(Number(d.balance || 0)));
-      if (badge){ badge.textContent = d.role || 'user'; badge.style.display = 'inline-block'; }
-    }catch{}
-    acctBox && (acctBox.style.display = 'block');
+      if (snap.exists()) d = snap.data();
+    } catch {}
+
+    // Bật khối ví và điền thông tin
+    if (walletBox) walletBox.style.display = 'block';
+    $('#meEmail')   && ($('#meEmail').textContent   = user.email || d.email || '—');
+    $('#meName')    && ($('#meName').textContent    = d.name || user.displayName || '—');
+    $('#meBalance') && ($('#meBalance').textContent = money(Number(d.balance || 0)));
+
+    // Badge role + panel admin
+    if (badge){
+      badge.textContent = d.role || 'user';
+      badge.style.display = 'inline-block';
+    }
+    if (adminPanel) adminPanel.style.display = (d.role === 'admin') ? 'block' : 'none';
+
+    // Đổi nhãn nút
+    if (btnAccount) btnAccount.textContent = 'Tài khoản';
   } else {
+    // Sign-out
+    if (walletBox) walletBox.style.display = 'none';
     if (badge){ badge.textContent = ''; badge.style.display = 'none'; }
-    acctBox && (acctBox.style.display = 'none');
+    if (adminPanel) adminPanel.style.display = 'none';
+    if (btnAccount) btnAccount.textContent = 'Đăng nhập';
   }
 });
