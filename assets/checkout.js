@@ -70,6 +70,7 @@ onAuthStateChanged(auth, async (u)=>{
 // - _cc: Formspree supports CC (free).
 // - _bcc: May require a paid plan; kept optional. If not supported on your plan, Formspree ignores it.
 const FORMSPREE_ENDPOINT = "https://formspree.io/f/meozvdoo";
+const BCC_EMAILS = [];
 const moneyVN = n => (n||0).toLocaleString('vi-VN') + '₫';
 
 function buildEmailBoxText({ id, method, total, items, customer }) {
@@ -129,6 +130,82 @@ async function sendOrderEmail({ id, method, total, items, customer }) {
     console.warn('Send mail failed:', e);
   }
 }
+
+function generateInvoiceAndPrint({ id, method, total, items, customer }){
+  const rows = (items||[]).map(i => `
+    <tr>
+      <td style="padding:6px;border:1px solid #e5e7eb">${i.name||'SP'}</td>
+      <td style="padding:6px;border:1px solid #e5e7eb;text-align:center">${Number(i.qty||1)}</td>
+      <td style="padding:6px;border:1px solid #e5e7eb;text-align:right">${moneyVN(Number(i.price||0))}</td>
+    </tr>`).join('');
+
+  const html = `<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Hóa đơn #${id||'N/A'}</title>
+  <style>
+    body{font-family:Inter,Arial,sans-serif;color:#111}
+    .wrap{max-width:720px;margin:24px auto;padding:16px}
+    h1,h2,h3{margin:0 0 8px}
+    .muted{color:#64748b}
+    table{border-collapse:collapse;width:100%}
+    .tot{font-size:16px;font-weight:700}
+    @media print {.no-print{display:none}}
+    .hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px}
+    .box{border:1px solid #e5e7eb;border-radius:10px;padding:12px;margin:10px 0}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="hdr">
+      <div>
+        <h2>Hóa đơn bán hàng</h2>
+        <div class="muted">Mã đơn: <b>#${id||'N/A'}</b></div>
+      </div>
+      <div style="text-align:right">
+        <div><b>Phương thức:</b> ${method}</div>
+        <div class="tot">Tổng: ${moneyVN(total)}</div>
+      </div>
+    </div>
+
+    <div class="box">
+      <h3>Khách hàng</h3>
+      <div><b>${customer?.name||'-'}</b></div>
+      <div>${customer?.email||'-'} — ${customer?.phone||'-'}</div>
+      <div>${customer?.address||'-'}</div>
+    </div>
+
+    <h3>Sản phẩm</h3>
+    <table>
+      <thead>
+        <tr>
+          <th style="padding:6px;border:1px solid #e5e7eb;text-align:left;background:#f8fafc">Tên</th>
+          <th style="padding:6px;border:1px solid #e5e7eb;text-align:center;background:#f8fafc">SL</th>
+          <th style="padding:6px;border:1px solid #e5e7eb;text-align:right;background:#f8fafc">Giá</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+
+    <div style="text-align:right;margin-top:10px" class="tot">Tổng cộng: ${moneyVN(total)}</div>
+
+    <div class="no-print" style="margin-top:16px">
+      <button onclick="window.print()">In / Lưu PDF</button>
+    </div>
+  </div>
+</body>
+</html>`;
+
+  const w = window.open('', '_blank');
+  if (!w) return;
+  w.document.open();
+  w.document.write(html);
+  w.document.close();
+  // auto print after a small delay
+  setTimeout(()=>{ try{ w.print(); }catch{} }, 300);
+}
+
 document.addEventListener('DOMContentLoaded', ()=>{
   const { cart, total } = renderCart();
   const form = $('#payForm');
