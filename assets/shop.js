@@ -19,10 +19,23 @@ function addToCart(item){
 }
 
 function cardHTML(p){
+  const showStrike = (typeof p.original_price === 'number') && (p.original_price > (p.price||0));
   return `
   <div class="product">
     <div class="product__media">
       <img src="${p.image || 'img/logo.jpg'}" alt="${p.name || ''}"/>
+    </div>
+    <div class="product__body">
+      <h3 class="product__title">${p.name || ''}</h3>
+      <div class="product__price">
+        <span class="price">${money(p.price||0)}</span>
+        ${showStrike ? `<span class="price--strike">${money(p.original_price)}</span>` : ''}
+      </div>
+      <button class="btn buy-now" data-id="${p.id}">Mua ngay</button>
+    </div>
+  </div>`;
+}
+" alt="${p.name || ''}"/>
     </div>
     <div class="product__body">
       <h3 class="product__title">${p.name || ''}</h3>

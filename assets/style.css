@@ -112,3 +112,6 @@ textarea{resize:vertical}
 .phone-fab { bottom: 150px; }   /* 56px + 10px khoảng cách tiếp */
 /* Toast */
 #toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--brand);color:#fff;padding:10px 14px;border-radius:10px;display:none;box-shadow:0 6px 20px rgba(0,0,0,.2);z-index:9999}
+
+/* Sale strike price */
+.price--strike{ text-decoration: line-through; opacity:.6; font-size:.95em; }
