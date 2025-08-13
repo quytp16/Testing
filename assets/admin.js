@@ -1,186 +1,178 @@
-// admin.js
-import { db   if (btn){ btn.disabled = false; btn.textContent = "Xác nhận trừ ví"; }
-  } catch(e){
-    console.error(e);
-    alert("Lỗi khi xác nhận trừ ví: " + (e?.message||e));
-    if (btn){ btn.disabled = false; btn.textContent = "Xác nhận trừ ví"; }
-  }
-} from "./firebase-config.js";
+// admin.js (enhanced with wallet deduction)
+import { db } from "./firebase-config.js";
 import {
-  collection, addDoc, updateDoc, deleteDoc, doc, getDoc,
-  onSnapshot, orderBy, query, serverTimestamp
+  collection, updateDoc, deleteDoc, doc, getDoc, getDocs,
+  onSnapshot, orderBy, query, where, serverTimestamp, runTransaction
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
-const $ = s => document.querySelector(s);
-const money = n => (n||0).toLocaleString('vi-VN') + '₫';
-function toNum(v){ const n = Number(v); return Number.isFinite(n) ? n : null; }
+const $ = (s) => document.querySelector(s);
+const moneyVN = (n) => (Number(n)||0).toLocaleString('vi-VN') + '₫';
 
-function requireAdmin(){
-  return document.getElementById('adminPanel')?.style.display !== 'none';
+function setRowHTML(el, html){
+  if (!el) return;
+  el.innerHTML = html;
 }
 
-// ---- Products ----
+// PRODUCTS
 function mountProducts(){
-  if (!requireAdmin()) return;
-  const rows = $('#ad_rows');
-  const q = query(collection(db, 'products'), orderBy('createdAt', 'desc'));
-  onSnapshot(q, (snap)=>{
-    rows.innerHTML='';
-    snap.forEach(docu=>{
-      const p = { id: docu.id, ...docu.data() };
-      const tr = document.createElement('tr');
-      tr.innerHTML = `<td>${p.name||''}</td>
-                      <td>${p.price??''}</td>
-                      <td>${p.original_price??''}</td>
-                      <td>${p.is_sale?'✔':''}</td>
-                      <td>${p.category||'—'}</td>
-                      <td>${p.image?`<a href="${p.image}" target="_blank">Xem</a>`:''}</td>
-                      <td><button data-ed="${p.id}">Sửa</button> <button data-del="${p.id}">Xoá</button></td>`;
-      rows.appendChild(tr);
+  const tbody = $('#ad_rows');
+  if (!tbody) return;
+  const qy = query(collection(db, 'products'), orderBy('updatedAt', 'desc'));
+  onSnapshot(qy, (snap)=>{
+    const rows = [];
+    snap.forEach((d)=>{
+      const x = d.data()||{};
+      rows.push(`<tr>
+        <td>${x.name||'-'}</td>
+        <td>${moneyVN(x.price)}</td>
+        <td>${x.original_price ? moneyVN(x.original_price) : '—'}</td>
+        <td>${x.is_sale ? '✅' : '—'}</td>
+        <td>${x.category||'—'}</td>
+        <td>${x.image ? `<img src="${x.image}" alt="" style="height:42px">` : '—'}</td>
+        <td>
+          <button class="btn btn--sm" data-edit-product="${d.id}">Sửa</button>
+          <button class="btn btn--sm btn--danger" data-del-product="${d.id}">Xoá</button>
+        </td>
+      </tr>`);
     });
-    rows.querySelectorAll('button[data-ed]').forEach(b=> b.onclick = async ()=>{
-      const snap = await getDoc(doc(db,'products', b.dataset.ed));
-      const p = snap.data()||{};
-      $('#ad_docId').value = snap.id;
-      $('#ad_name').value = p.name||'';
-      $('#ad_price').value = p.price||'';
-      $('#ad_original_price').value = p.original_price||'';
-      $('#ad_image').value = p.image||'';
-      $('#ad_is_sale').checked = !!p.is_sale;
-      const cat = $('#ad_category');
-      if (cat) cat.value = p.category || 'dieucay';
-      window.scrollTo({top:0,behavior:'smooth'});
-    });
-    rows.querySelectorAll('button[data-del]').forEach(b=> b.onclick = async ()=>{
+    setRowHTML(tbody, rows.join(''));
+  });
+
+  document.addEventListener('click', async (e)=>{
+    const del = e.target.closest('[data-del-product]');
+    if (del){
+      const id = del.getAttribute('data-del-product');
       if (!confirm('Xoá sản phẩm này?')) return;
-      await deleteDoc(doc(db,'products', b.dataset.del));
-    });
+      await deleteDoc(doc(db, 'products', id));
+    }
   });
-
-  $('#ad_save').onclick = async ()=>{
-    const payload = {
-      name: $('#ad_name').value.trim(),
-      price: toNum($('#ad_price').value),
-      original_price: toNum($('#ad_original_price').value),
-      image: $('#ad_image').value.trim(),
-      is_sale: $('#ad_is_sale').checked,
-      category: ($('#ad_category')?.value)||'dieucay',
-      updatedAt: serverTimestamp(),
-    };
-    if (!payload.name) { alert('Nhập tên sản phẩm'); return; }
-    const id = $('#ad_docId').value;
-    if (id) await updateDoc(doc(db,'products',id), payload);
-    else await addDoc(collection(db,'products'), { ...payload, createdAt: serverTimestamp() });
-    // reset
-    $('#ad_docId').value=''; $('#ad_name').value=''; $('#ad_price').value='';
-    $('#ad_original_price').value=''; $('#ad_image').value=''; $('#ad_is_sale').checked=false;
-    if ($('#ad_category')) $('#ad_category').value='dieucay';
-  };
-  $('#ad_reset').onclick = ()=>{ 
-    $('#ad_docId').value=''; $('#ad_name').value=''; $('#ad_price').value=''; 
-    $('#ad_original_price').value=''; $('#ad_image').value=''; $('#ad_is_sale').checked=false;
-    if ($('#ad_category')) $('#ad_category').value='dieucay';
-  };
 }
 
-// ---- Users ----
+// USERS
 function mountUsers(){
-  if (!requireAdmin()) return;
-  const rows = $('#user_rows');
-  const q = query(collection(db,'users'), orderBy('displayName'));
-  onSnapshot(q, (snap)=>{
-    rows.innerHTML='';
-    snap.forEach(docu=>{
-      const u = { id: docu.id, ...docu.data() };
-      const tr = document.createElement('tr');
-      tr.innerHTML = `<td>${u.email||''}</td><td>${u.displayName||''}</td><td>${u.role||'user'}</td><td>${money(u.balance||0)}</td>
-                      <td>
-                        <button data-topup="${u.id}">Nạp</button>
-                        <button data-deduct="${u.id}">Rút</button>
-                        <button data-role="${u.id}">Đổi role</button>
-                      </td>`;
-      rows.appendChild(tr);
+  const tbody = $('#user_rows');
+  if (!tbody) return;
+  const qy = query(collection(db, 'users'), orderBy('email', 'asc'));
+  onSnapshot(qy, (snap)=>{
+    const rows = [];
+    snap.forEach((d)=>{
+      const x = d.data()||{};
+      rows.push(`<tr>
+        <td>${x.email||'—'}</td>
+        <td>${x.name||'—'}</td>
+        <td>${x.role||'user'}</td>
+        <td>${moneyVN(x.balance||0)}</td>
+        <td>
+          <button class="btn btn--sm" data-role-user="${d.id}">Set user</button>
+          <button class="btn btn--sm" data-role-admin="${d.id}">Set admin</button>
+        </td>
+      </tr>`);
     });
-    rows.querySelectorAll('button[data-topup]').forEach(b=> b.onclick = ()=> adjustBalance(b.dataset.topup, +prompt('Nạp bao nhiêu? (VND)', '0')||0));
-    rows.querySelectorAll('button[data-deduct]').forEach(b=> b.onclick = ()=> adjustBalance(b.dataset.deduct, -(+prompt('Rút bao nhiêu? (VND)', '0')||0)));
-    rows.querySelectorAll('button[data-role]').forEach(b=> b.onclick = ()=> changeRole(b.dataset.role));
+    setRowHTML(tbody, rows.join(''));
+  });
+
+  document.addEventListener('click', async (e)=>{
+    const btnU = e.target.closest('[data-role-user]');
+    const btnA = e.target.closest('[data-role-admin]');
+    if (btnU || btnA){
+      const id = (btnU||btnA).getAttribute(btnU ? 'data-role-user' : 'data-role-admin');
+      await updateDoc(doc(db,'users', id), { role: btnA ? 'admin' : 'user', updatedAt: serverTimestamp() });
+    }
   });
 }
 
-async function adjustBalance(uid, delta){
-  if (!delta) return;
-  const ref = doc(db,'users', uid);
-  const snap = await getDoc(ref);
-  const cur = (snap.data()?.balance)||0;
-  const next = Math.max(0, cur + delta);
-  await updateDoc(ref, { balance: next, updatedAt: serverTimestamp() });
-}
-async function changeRole(uid){
-  const ref = doc(db,'users', uid);
-  const snap = await getDoc(ref);
-  const cur = snap.data()?.role||'user';
-  const next = (cur==='admin')?'user':'admin';
-  if (!confirm(`Đổi role ${cur} -> ${next}?`)) return;
-  await updateDoc(ref, { role: next, updatedAt: serverTimestamp() });
-}
-
-// ---- Orders (tối giản) ----
+// ORDERS
 function mountOrders(){
-  if (!requireAdmin()) return;
-  const rows = $('#order_rows');
-  const q = query(collection(db,'orders'), orderBy('createdAt','desc'));
-  onSnapshot(q, (snap)=>{
-    rows.innerHTML='';
-    snap.forEach(docu=>{
-      const o = { id: docu.id, ...docu.data() };
-      const tr = document.createElement('tr');
-      tr.innerHTML = `<td>${o.id}</td><td>${o.user?.email||o.userId||''}</td><td>${money(o.total||0)}</td>
-                      <td>${o.paymentMethod||''}</td><td>${o.status||''}</td>
-                      <td>${renderOrderActions(o)}</td>`;
-      rows.appendChild(tr);
+  const tbody = $('#order_rows');
+  if (!tbody) return;
+  const qy = query(collection(db, 'orders'), orderBy('createdAt', 'desc'));
+  onSnapshot(qy, (snap)=>{
+    const rows = [];
+    snap.forEach((d)=>{
+      const x = d.data()||{};
+      const cust = x.customer || {};
+      const status = x.status || 'pending';
+      const method = x.paymentMethod || x.method || '—';
+      const canMarkPaid = status === 'pending' || status === 'pending_wallet' || status === 'awaiting_bank';
+      const walletAction = (method === 'WALLET' || method === 'wallet') && (status === 'pending' || status === 'pending_wallet');
+      const actions = canMarkPaid
+        ? `<div class="flex gap-2">
+             ${walletAction ? `<button class="btn btn--sm" data-wallet-pay="${d.id}">Xác nhận trừ ví + thanh toán</button>` : ''}
+             <button class="btn btn--sm" data-mark-paid="${d.id}">Đánh dấu đã thanh toán</button>
+           </div>`
+        : '—';
+      rows.push(`<tr>
+        <td>#${d.id.slice(-6)}</td>
+        <td>${cust.name||'—'}<br/><span class="muted small">${cust.email||cust.phone||''}</span></td>
+        <td>${moneyVN(x.total||0)}</td>
+        <td>${method}</td>
+        <td>${status}</td>
+        <td>${actions}</td>
+      </tr>`);
     });
-    rows.querySelectorAll('[data-confirm-wallet]').forEach(b=> b.onclick = ()=> confirmWallet(b.dataset.id));
-    rows.querySelectorAll('[data-mark-paid]').forEach(b=> b.onclick = ()=> markPaid(b.dataset.id));
+    setRowHTML(tbody, rows.join(''));
   });
-}
-function renderOrderActions(o){
-  if (o.paymentMethod==='WALLET' && o.status==='awaiting_admin'){
-    return `<button data-confirm-wallet="${o.id}">Xác nhận trừ ví</button>`;
-  }
-  if (o.status!=='paid'){
-    return `<button data-mark-paid="${o.id}">Đánh dấu đã thanh toán</button>`;
-  }
-  return '';
-}
-function showToast(msg){
-  const t = document.getElementById('toast');
-  if (t){ t.textContent = msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'), 1600); }
-  else alert(msg);
-}
-async function confirmWallet(id){
-  const btn = document.querySelector(`[data-confirm-wallet="${id}"]`);
-  if (btn){ btn.disabled = True; btn.textContent = "Đang xác nhận..."; }
-  try { const ref = doc(db,'orders', id);
-  const snap = await getDoc(ref); const o = snap.data();
-  if (!o) return;
-  const uref = doc(db,'users', o.userId);
-  const us = await getDoc(uref); const cur = (us.data()?.balance)||0;
-  if (cur < (o.total||0)) { alert('Số dư không đủ'); return; }
-  await updateDoc(uref, { balance: cur - (o.total||0), updatedAt: serverTimestamp() });
-  await updateDoc(ref, { status: 'paid', paidAt: serverTimestamp() }); showToast('Đã xác nhận trừ ví và đánh dấu đã thanh toán');
-}
-async function markPaid(id){
-  const btn = document.querySelector(`[data-mark-paid="${id}"]`);
-  if (btn){ btn.disabled = true; btn.textContent = "Đang cập nhật..."; }
-  try { const ref = doc(db,'orders', id);
-  await updateDoc(ref, { status: 'paid', paidAt: serverTimestamp() }); showToast('Đã xác nhận trừ ví và đánh dấu đã thanh toán');
+
+  // Mark paid without wallet deduction
+  document.addEventListener('click', async (e)=>{
+    const btn = e.target.closest('[data-mark-paid]');
+    if (!btn) return;
+    const id = btn.getAttribute('data-mark-paid');
+    btn.disabled = true; btn.textContent = 'Đang cập nhật...';
+    try {
+      await updateDoc(doc(db, 'orders', id), { status: 'paid', paidAt: serverTimestamp(), updatedAt: serverTimestamp() });
+      btn.textContent = 'Đã thanh toán';
+    } catch(err){
+      alert('Không thể cập nhật trạng thái: ' + (err?.message || err));
+      btn.disabled = false; btn.textContent = 'Đánh dấu đã thanh toán';
+    }
+  });
+
+  // Wallet deduction + mark paid
+  document.addEventListener('click', async (e)=>{
+    const btn = e.target.closest('[data-wallet-pay]');
+    if (!btn) return;
+    const id = btn.getAttribute('data-wallet-pay');
+    btn.disabled = true; const old = btn.textContent; btn.textContent = 'Đang trừ ví...';
+
+    try {
+      await runTransaction(db, async (tx)=>{
+        const refOrder = doc(db, 'orders', id);
+        const snapOrder = await tx.get(refOrder);
+        if (!snapOrder.exists()) throw new Error('Không tìm thấy đơn hàng');
+        const o = snapOrder.data()||{};
+        if (o.status === 'paid') return;
+        const total = Number(o.total||0);
+        const customer = o.customer || {};
+        const email = (customer.email||'').trim().toLowerCase();
+        if (!email) throw new Error('Đơn hàng không có email khách');
+
+        // find user by email
+        const qyUser = query(collection(db,'users'), where('email','==', email));
+        const snapUser = await getDocs(qyUser);
+        if (snapUser.empty) throw new Error('Không tìm thấy user trùng email');
+
+        const userDoc = snapUser.docs[0];
+        const refUser = doc(db, 'users', userDoc.id);
+        const bal = Number((userDoc.data()||{}).balance || 0);
+        if (bal < total) throw new Error('Số dư ví không đủ');
+
+        // deduct and mark paid
+        tx.update(refUser, { balance: bal - total, updatedAt: serverTimestamp() });
+        tx.update(refOrder, { status: 'paid', paidAt: serverTimestamp(), updatedAt: serverTimestamp(), paidBy: email, paidMethod: 'wallet' });
+      });
+
+      btn.textContent = 'Đã trừ ví & thanh toán';
+    } catch(err){
+      alert('Không thể trừ ví/đánh dấu thanh toán: ' + (err?.message || err));
+      btn.disabled = false; btn.textContent = old;
+    }
+  });
 }
 
-// Boot
+// Mount
 window.addEventListener('load', ()=>{
-  const observer = new MutationObserver(()=>{
-    const show = document.getElementById('adminPanel')?.style.display !== 'none';
-    if (show && !observer._mounted){ mountProducts(); mountUsers(); mountOrders(); observer._mounted = true; }
-  });
-  observer.observe(document.body, { attributes:true, childList:true, subtree:true });
+  mountProducts();
+  mountUsers();
+  mountOrders();
 });
